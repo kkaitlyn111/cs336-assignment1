@@ -2,13 +2,16 @@
 
 All changes we make to the assignment code or PDF will be documented in this file.
 
+
+## [1.0.5] 2025-04-15
+- code: Add submission script, fix typos
+
 ## [1.0.4] - 2025-04-08
 ### Added
 - handout: add guidance on parallelizing pretokenization and provide starter code for chunking
 - handout: add guidance on removing special tokens before pretokenization (you should split on them!)
 
 ### Changed
-- handout: clarify that .encode() should not perform merges across pre-tokens
 - handout: fix command for compiling model on MPS backend
 
 ## [1.0.3] - 2025-04-07
@@ -177,7 +180,7 @@ All changes we make to the assignment code or PDF will be documented in this fil
 - handout: fix the expected number of non-embedding parameters for model with
   recommended TinyStories hyperparameters (section 7.2).
 - handout: replace `<|endofsequence|>` with `<|endoftext|>` in the `decoding` problem.
-- code: fix the setup command (`pip install -e .'[test]'`)to improve zsh compatibility. 
+- code: fix the setup command (`pip install -e .'[test]'`)to improve zsh compatibility.
 - handout: fix various trivial typos and formatting errors.
 
 ## [0.1.0] - 2024-04-01

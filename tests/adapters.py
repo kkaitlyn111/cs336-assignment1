@@ -24,7 +24,7 @@ def run_linear(
         in_dim (int): The size of the input dimension
         out_dim (int): The size of the output dimension
         weights (Float[Tensor, "d_out d_in"]): The linear weights to use
-        in_features (Float[Tensor, "... d_out"]): The output tensor to apply the function to
+        in_features (Float[Tensor, "... d_in"]): The output tensor to apply the function to
     
     Returns:
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
