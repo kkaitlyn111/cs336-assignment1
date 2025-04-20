@@ -55,6 +55,26 @@ class RMSNorm(torch.nn.Module):
         return result.to(in_dtype)
         
 
+class SwiGLUFeedForward(nn.Module):
+    def __init__(self, d_model: int, d_ff: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
+        super().__init__()
+        self.d_model = d_model
+        self.device = device
+        self.dtype = dtype
+
+        self.W1 = Linear(d_model, d_ff, device=device, dtype=dtype)
+        self.W2 = Linear(d_ff, d_model, device=device, dtype=dtype)
+        self.W3 = Linear(d_model, d_ff, device=device, dtype=dtype)
+        self.d_ff = d_ff
+
+    def forward(self, x):
+        t1 = einsum(x, self.W1.weights, "b s d_model, d_ff d_model -> b s d_ff")
+        t2 = torch.sigmoid(t1) * t1
+        t3 = einsum(x, self.W3.weights, "b s d_model, d_ff d_model -> b s d_ff")
+        t4 = t2 * t3
+        result = einsum(t4, self.W2.weights, "b s d_ff, d_model d_ff -> b s d_model")
+        return result
+
 
         
     
