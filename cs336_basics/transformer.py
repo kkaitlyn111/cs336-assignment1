@@ -75,6 +75,44 @@ class SwiGLUFeedForward(nn.Module):
         result = einsum(t4, self.W2.weights, "b s d_ff, d_model d_ff -> b s d_model")
         return result
 
+class RoPE(nn.Module):
+    def __init__(self, theta: float, d_k: int, max_seq_len: int, device=None):
+        super().__init__()
+        self.theta = theta
+        self.max_seq_len = max_seq_len
+        self.device = device
+        self.d_k = d_k
 
+        if d_k % 2 != 0:
+            raise ValueError("Input dimension must be even")
         
+        position_indices = torch.arange(max_seq_len, device=device)
+        dim_indices = torch.arange(0, d_k, 2, device=device)
+        freq = 1.0 / (theta ** (dim_indices.float() / d_k))
+
+        angles = torch.outer(position_indices, freq)
+
+        cos_sin = torch.zeros(max_seq_len, d_k // 2, 2, device=device)
+        cos_sin[:, :, 0] = torch.cos(angles)
+        cos_sin[:, :, 1] = torch.sin(angles)
+
+        self.register_buffer('cos_sin_matrix', cos_sin, persistent=False)
+        
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
+        # Rearrange input into pairs
+        x_pairs = rearrange(x, "... (split1 split2) -> ... split1 split2", 
+                         split1=self.d_k // 2, split2=2)
+        
+        # Apply rotation using cos-sin matrix
+        cos_vals = self.cos_sin_matrix[token_positions, :, 0]
+        sin_vals = self.cos_sin_matrix[token_positions, :, 1]
+
+        rotated = torch.zeros_like(x_pairs)
+        rotated[..., 0] = cos_vals * x_pairs[..., 0] - sin_vals * x_pairs[..., 1]
+        rotated[..., 1] = sin_vals * x_pairs[..., 0] + cos_vals * x_pairs[..., 1]
+
+        # Reshape back to original dimensions
+        result = rotated.reshape(x.shape)
+
+        return result
     

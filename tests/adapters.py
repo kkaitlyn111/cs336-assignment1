@@ -210,7 +210,11 @@ def run_rope(
     Returns:
         Float[Tensor, " ... sequence_length d_k"]: Tensor with RoPEd input.
     """
-    raise NotImplementedError
+    rope = RoPE(theta, d_k, max_seq_len)
+    # Reshape token_positions to be 2D if it's 1D
+    if len(token_positions.shape) == 1:
+        token_positions = token_positions.unsqueeze(0)
+    return rope.forward(in_query_or_key, token_positions)
 
 
 def run_transformer_block(
