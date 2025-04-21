@@ -2,6 +2,9 @@ import torch
 import torch.nn as nn
 from einops import einsum, rearrange
 import numpy as np
+from jaxtyping import Float, Int
+import numpy.typing as npt
+from torch import Tensor, LongTensor
 
 class Linear(nn.Module):
     def __init__(self, in_features: int, out_features: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
@@ -99,11 +102,11 @@ class RoPE(nn.Module):
         self.register_buffer('cos_sin_matrix', cos_sin, persistent=False)
         
     def forward(self, x: torch.Tensor, token_positions: torch.Tensor) -> torch.Tensor:
-        # Rearrange input into pairs
+        # rearrange input into pairs
         x_pairs = rearrange(x, "... (split1 split2) -> ... split1 split2", 
                          split1=self.d_k // 2, split2=2)
         
-        # Apply rotation using cos-sin matrix
+        # rotate
         cos_vals = self.cos_sin_matrix[token_positions, :, 0]
         sin_vals = self.cos_sin_matrix[token_positions, :, 1]
 
@@ -111,8 +114,86 @@ class RoPE(nn.Module):
         rotated[..., 0] = cos_vals * x_pairs[..., 0] - sin_vals * x_pairs[..., 1]
         rotated[..., 1] = sin_vals * x_pairs[..., 0] + cos_vals * x_pairs[..., 1]
 
-        # Reshape back to original dimensions
+        # reshape back to original dimension
         result = rotated.reshape(x.shape)
 
         return result
     
+def softmax(tensor: torch.Tensor, dim: int):
+    max_vals = torch.max(tensor, dim=dim, keepdim=True)[0]
+    
+    # trick to ensure numerical stability
+    exp_tensor = torch.exp(tensor - max_vals)
+    
+    sum_exp = torch.sum(exp_tensor, dim=dim, keepdim=True)
+
+    softmax_output = exp_tensor / sum_exp
+    return softmax_output
+
+def scaled_dot_product_attention(Q: Float[Tensor, " ... queries d_k"], K: Float[Tensor, " ... keys d_k"], V: Float[Tensor, " ... values d_v"], mask: Float[Tensor, " ... queries keys"] | None = None,) -> Float[Tensor, " ... queries d_v"]:
+    d_k = Q.shape[-1]
+    attention_scores = torch.einsum("...qd,...kd->...qk", Q, K)
+    attention_scores = attention_scores / np.sqrt(d_k)
+
+    if mask is not None:
+        attention_scores = attention_scores.masked_fill(mask == False, -1e9)
+    
+    attention_weights = softmax(attention_scores, dim=-1)
+    output = torch.einsum("...qk,...kd->...qd", attention_weights, V)
+    
+    return output
+
+    
+class MultiheadSelfAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, max_seq_len: int | None = None, theta: float | None = None,
+                 device: torch.device | None = None,
+                 dtype: torch.dtype | None = None, apply_rope: bool = False):
+        super().__init__()
+        self.d_model = d_model
+        self.num_heads = num_heads
+        self.device = device
+        self.dtype = dtype
+        self.max_seq_len = max_seq_len
+        self.theta = theta
+        assert d_model % num_heads == 0
+        self.d_v = d_model // num_heads
+        self.d_k = self.d_v
+
+        self.Q_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.K_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.V_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+        self.O_proj = Linear(d_model, d_model, device=device, dtype=dtype)
+
+        if theta is not None:
+            self.rope = RoPE(theta, self.d_k, max_seq_len, device=device)
+        else:
+            self.rope = None
+
+    def forward(self, x: torch.Tensor, token_positions: torch.Tensor = None) -> torch.Tensor:
+
+        Q_x = self.Q_proj.forward(x)
+        K_x = self.K_proj.forward(x)
+        V_x = self.V_proj.forward(x)
+
+        Q = rearrange(Q_x, "... batch max_seq_len (n_h d_k) -> ... batch n_h max_seq_len d_k", n_h = self.num_heads)
+        K = rearrange(K_x, "... batch max_seq_len (n_h d_k) -> ... batch n_h max_seq_len d_k", n_h = self.num_heads)
+        V = rearrange(V_x, "... batch max_seq_len (n_h d_v) -> ... batch n_h max_seq_len d_v", n_h = self.num_heads)
+
+        if self.rope != None:
+            Q = self.rope(Q, token_positions)
+            K = self.rope(K, token_positions)
+            
+        mask = torch.triu(torch.ones(x.shape[1], x.shape[1]), diagonal=1).to(torch.bool)
+        mask = ~mask 
+
+        result = scaled_dot_product_attention(Q, K, V, mask=mask)
+
+        result = rearrange(result, "... n_h max_seq_len d_k -> ... max_seq_len (n_h d_k)")
+
+        result = self.O_proj.forward(result)
+        
+        return result
+
+        
+
+
