@@ -32,7 +32,7 @@ def run_linear(
         Float[Tensor, "... d_out"]: The transformed output of your linear module.
     """
     linearlayer = Linear(d_in, d_out)
-    linearlayer.weights.data = weights
+    linearlayer.weight.data = weights
     return linearlayer.forward(in_features)
 
 
@@ -55,7 +55,7 @@ def run_embedding(
         Float[Tensor, "... d_model"]: Batch of embeddings returned by your Embedding layer.
     """
     embedding = Embedding(vocab_size, d_model)
-    embedding.weights.data = weights
+    embedding.weight.data = weights
     return embedding.forward(token_ids)
 
 
@@ -90,9 +90,9 @@ def run_swiglu(
     # swiglu.w3.weight.data = w3_weight
 
     swiglu = SwiGLUFeedForward(d_model, d_ff)
-    swiglu.W1.weights.data = w1_weight
-    swiglu.W2.weights.data = w2_weight
-    swiglu.W3.weights.data = w3_weight
+    swiglu.w1.weight.data = w1_weight
+    swiglu.w2.weight.data = w2_weight
+    swiglu.w3.weight.data = w3_weight
     return swiglu.forward(in_features)
 
 
@@ -150,10 +150,10 @@ def run_multihead_self_attention(
         implementation with the given QKV projection weights and input features.
     """
     multihead = MultiheadSelfAttention(d_model, num_heads, False)
-    multihead.Q_proj.weights.data = q_proj_weight
-    multihead.K_proj.weights.data = k_proj_weight
-    multihead.V_proj.weights.data = v_proj_weight
-    multihead.O_proj.weights.data = o_proj_weight
+    multihead.q_proj.weight.data = q_proj_weight
+    multihead.k_proj.weight.data = k_proj_weight
+    multihead.v_proj.weight.data = v_proj_weight
+    multihead.o_proj.weight.data = o_proj_weight
 
     return multihead.forward(in_features)
 
@@ -205,12 +205,12 @@ def run_multihead_self_attention_with_rope(
         apply_rope=True
     )
     
-    multihead.Q_proj.weights.data = q_proj_weight
-    multihead.K_proj.weights.data = k_proj_weight
-    multihead.V_proj.weights.data = v_proj_weight
-    multihead.O_proj.weights.data = o_proj_weight
+    multihead.q_proj.weight.data = q_proj_weight
+    multihead.k_proj.weight.data = k_proj_weight
+    multihead.v_proj.weight.data = v_proj_weight
+    multihead.o_proj.weight.data = o_proj_weight
     
-    return multihead.forward(in_features, token_positions)
+    return multihead.forward(in_features)
 
 
 def run_rope(
@@ -309,7 +309,10 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    t_block = TransformerBlock(d_model, num_heads, d_ff, max_seq_len, theta)
+    t_block.load_state_dict(weights)
+    
+    return t_block.forward(in_features)
 
 
 def run_transformer_lm(
@@ -391,7 +394,23 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    model = TransformerLM(
+        d_model=d_model,
+        num_heads=num_heads,
+        d_ff=d_ff,
+        vocab_size=vocab_size,
+        context_length=context_length,
+        num_layers=num_layers,
+        max_seq_len=context_length,
+        theta=rope_theta,
+        device=in_indices.device,
+        dtype=in_indices.dtype
+    )
+    
+    # Load embedding weights
+    model.load_state_dict(weights)
+    
+    return model.forward(in_indices)
 
 
 def run_rmsnorm(
@@ -415,7 +434,7 @@ def run_rmsnorm(
         RMSNorm of the `in_features`.
     """
     rms = RMSNorm(d_model, eps)
-    rms.weights.data = weights
+    rms.weight.data = weights
     return rms.forward(in_features)
     raise NotImplementedError
 
