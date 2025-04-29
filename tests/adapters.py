@@ -11,6 +11,9 @@ from torch import Tensor
 from cs336_basics.train_bpe import *
 from cs336_basics.simple_tokenizer import *
 from cs336_basics.transformer import *
+from cs336_basics.training import *
+from cs336_basics.optimizers import *
+from cs336_basics.data_loader import *
 
 
 def run_linear(
@@ -394,18 +397,7 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    model = TransformerLM(
-        d_model=d_model,
-        num_heads=num_heads,
-        d_ff=d_ff,
-        vocab_size=vocab_size,
-        context_length=context_length,
-        num_layers=num_layers,
-        max_seq_len=context_length,
-        theta=rope_theta,
-        device=in_indices.device,
-        dtype=in_indices.dtype
-    )
+    model = TransformerLM(d_model, num_heads, d_ff, vocab_size, context_length, num_layers, rope_theta)
     
     # Load embedding weights
     model.load_state_dict(weights)
@@ -473,6 +465,7 @@ def run_get_batch(
         is the sampled input sequences, and the second tuple item is the corresponding
         language modeling labels.
     """
+    return data_loader(dataset, batch_size, context_length, device)
     raise NotImplementedError
 
 
@@ -505,6 +498,7 @@ def run_cross_entropy(inputs: Float[Tensor, " batch_size vocab_size"], targets: 
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
+    return cross_entropy_loss(inputs, targets)
     raise NotImplementedError
 
 
@@ -517,13 +511,14 @@ def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm:
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> type[torch.optim.Optimizer]:
     """
     Returns a torch.optim.Optimizer that implements AdamW.
     """
+    return AdamW
     raise NotImplementedError
 
 
@@ -552,6 +547,7 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
+    return get_cosine_lr(it, min_learning_rate, max_learning_rate, warmup_iters, cosine_cycle_iters)
     raise NotImplementedError
 
 
@@ -571,7 +567,8 @@ def run_save_checkpoint(
             we've completed.
         out (str | os.PathLike | BinaryIO | IO[bytes]): Path or file-like object to serialize the model, optimizer, and iteration to.
     """
-    raise NotImplementedError
+    save_checkpoint(model, optimizer, iteration, out)
+
 
 
 def run_load_checkpoint(
@@ -592,7 +589,7 @@ def run_load_checkpoint(
     Returns:
         int: the previously-serialized number of iterations.
     """
-    raise NotImplementedError
+    return load_checkpoint(src, model, optimizer)
 
 
 def get_tokenizer(
