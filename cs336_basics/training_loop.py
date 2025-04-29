@@ -10,6 +10,7 @@ from cs336_basics.optimizers import AdamW, SGD
 from cs336_basics.data_loader import data_loader
 from cs336_basics.simple_tokenizer import Tokenizer
 from cs336_basics.transformer import TransformerLM
+from cs336_basics.logger import ExperimentLogger
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -56,6 +57,7 @@ def parse_args():
     parser.add_argument("--eval_freq", type=int, default=1000)
     parser.add_argument("--checkpoint_freq", type=int, default=1000)
     parser.add_argument("--save_best_only", type=bool, default=True)
+    parser.add_argument("--experiment_name", type=str, default=None)
 
     # device 
     parser.add_argument("--device", type=str, default="mps")
@@ -90,8 +92,14 @@ def evaluate(model, valid_data, args, device):
 def main():
     args = parse_args()
     
-    # Setup
-    wandb.init(project=args.wandb_project, config=vars(args))
+    # Setup logger
+    logger = ExperimentLogger(
+        project_name=args.wandb_project,
+        experiment_name=args.experiment_name,
+        config=vars(args)
+    )
+    
+    # Setup directories
     os.makedirs(args.checkpoint_dir, exist_ok=True)
     device = torch.device(args.device)
     
@@ -148,19 +156,12 @@ def main():
         
         # Logging
         if step % args.log_freq == 0:
-            wandb.log({
-                "train/loss": train_loss,
-                "train/lr": lr,
-                "train/step": step
-            })
+            logger.log_train_step(train_loss, step)
         
         # Evaluation and checkpointing
         if step % args.eval_freq == 0:
             val_loss = evaluate(model, valid_data, args, device)
-            wandb.log({
-                "val/loss": val_loss,
-                "val/step": step
-            })
+            logger.log_validation(val_loss, step)
             
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
@@ -188,7 +189,8 @@ def main():
         os.path.join(args.checkpoint_dir, "final_model.pt")
     )
     
-    wandb.finish()
+    # Finish logging
+    logger.finish()
 
 if __name__ == "__main__":
     main()
