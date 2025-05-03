@@ -108,15 +108,3 @@ class AdamW(Optimizer):
         
         return loss
 
-def get_cosine_lr(t: int, alpha_min: float, alpha_max: float, Tw: int, Tc: int) -> float:
-    if t < Tw:
-        alpha_t = t / Tw * alpha_max
-    elif t <= Tc:
-        alpha_t = alpha_min + 0.5 * (1 + math.cos((t - Tw)/(Tc - Tw)*math.pi))*(alpha_max - alpha_min)
-    else:
-        alpha_t = alpha_min
-    return alpha_t
-
-
-
-
