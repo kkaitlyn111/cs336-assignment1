@@ -10,8 +10,8 @@ from tqdm import tqdm
 import time
 
 def run_lr_sweep(
-    min_lr=1e-5,
-    max_lr=1e-2,
+    min_test_lr=1e-5,
+    max_test_lr=1e-3,
     num_runs=5,
     project_name="transformer-lm-lr-sweep"
 ):
@@ -19,7 +19,7 @@ def run_lr_sweep(
     Run a LR sweep with exponentially spaced learning rates using existing training loop
     """
     # exponentially spaced learning rates
-    learning_rates = np.exp(np.linspace(np.log(min_lr), np.log(max_lr), num_runs))
+    learning_rates = np.exp(np.linspace(np.log(min_test_lr), np.log(max_test_lr), num_runs))
     
     results = {
         'learning_rates': learning_rates.tolist(),
@@ -40,7 +40,7 @@ def run_lr_sweep(
         args = parse_args()
         args.learning_rate = lr
         args.max_lr = lr
-        args.min_lr = lr/10
+        args.min_lr = 10e-5
         args.wandb_project = project_name
         args.experiment_name = f"lr_{lr:.2e}"  # Add learning rate to experiment name
         
@@ -53,12 +53,12 @@ def run_lr_sweep(
         
         args.vocab_size = 10000
         args.context_length = 128
-        args.batch_size = 4
-        args.d_model = 64
+        args.batch_size = 8
+        args.d_model = 256
         args.num_heads = 4
         args.num_layers = 2
-        args.d_ff = 128
-        args.max_steps = 4000
+        args.d_ff = 64
+        args.max_steps = 1000
         args.max_seq_len = 256  # must be greater than context_length
         args.min_loss_threshold = 1.45
         
@@ -100,8 +100,8 @@ def run_lr_sweep(
         project_name=project_name,
         experiment_name="lr_sweep",
         config={
-            'min_lr': min_lr,
-            'max_lr': max_lr,
+            'min_test_lr': min_test_lr,
+            'max_test_lr': max_test_lr,
             'num_runs': num_runs,
             'results': results
         }
@@ -140,11 +140,11 @@ if __name__ == "__main__":
         #num_runs=6,   
         #project_name="transformer-lm-lr-sweep-v5" 
 
-        # try wide range to get it to diverge
-        min_lr=1.39e-3,  
-        max_lr=1e-2,  
-        num_runs=3,   
-        project_name="transformer-lm-lr-sweep-v3" 
+        # try to get a good result
+        min_test_lr=5e-3,  
+        max_test_lr=5e-3,  
+        num_runs=1,   
+        project_name="transformer-lm-lr-sweep-v4" 
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 
