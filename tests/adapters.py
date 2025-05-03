@@ -156,7 +156,7 @@ def run_multihead_self_attention(
     multihead.q_proj.weight.data = q_proj_weight
     multihead.k_proj.weight.data = k_proj_weight
     multihead.v_proj.weight.data = v_proj_weight
-    multihead.o_proj.weight.data = o_proj_weight
+    multihead.output_proj.weight.data = o_proj_weight
 
     return multihead.forward(in_features)
 
@@ -181,6 +181,7 @@ def run_multihead_self_attention_with_rope(
     This version of MHA should include RoPE.
     In this case, the RoPE embedding dimension must be the head embedding dimension (d_model // num_heads).
     See section 3.2.2 of Vaswani et al., 2017.
+
 
     Args:
         d_model (int): Dimensionality of the feedforward input and output.
@@ -211,7 +212,7 @@ def run_multihead_self_attention_with_rope(
     multihead.q_proj.weight.data = q_proj_weight
     multihead.k_proj.weight.data = k_proj_weight
     multihead.v_proj.weight.data = v_proj_weight
-    multihead.o_proj.weight.data = o_proj_weight
+    multihead.output_proj.weight.data = o_proj_weight
     
     return multihead.forward(in_features)
 
@@ -397,7 +398,16 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    model = TransformerLM(d_model, num_heads, d_ff, vocab_size, context_length, num_layers, rope_theta)
+    model = TransformerLM(
+        d_model=d_model, 
+        num_heads=num_heads, 
+        d_ff=d_ff, 
+        vocab_size=vocab_size, 
+        context_length=context_length, 
+        num_layers=num_layers, 
+        max_seq_len=context_length,  
+        theta=rope_theta
+    )
     
     # Load embedding weights
     model.load_state_dict(weights)
