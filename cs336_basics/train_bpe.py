@@ -214,12 +214,12 @@ def process_chunk(input_path: str, start: int, end: int, special_tokens: list[st
                 if piece in special_tokens:
                     continue
                     
-                # Time pretokenization
+                # time pretokenization
                 pretoken_start = time.time()
                 pretokenized = pretokenize(piece)
                 stats['pretokenize_time'].append(time.time() - pretoken_start)
                 
-                # Time encoding and frequency counting
+                # time encoding and frequency counting
                 encoding_start = time.time()
                 for pretoken, count in pretokenized.items():
                     key = tuple(bytes([b]) for b in pretoken.encode("utf-8"))

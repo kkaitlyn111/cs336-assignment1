@@ -14,12 +14,16 @@ def find_chunk_boundaries(
         "Must represent special token as a bytestring"
     )
 
-    desired_num_chunks = 10000
-
     # Get total file size in bytes
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
     file.seek(0)
+
+    # Calculate desired number of chunks based on file size
+    # Aim for chunks of roughly 1MB each
+    # target_chunk_size = 1024 * 1024  # 1MB
+    # desired_num_chunks = max(1, min(1000, file_size // target_chunk_size))
+    desired_num_chunks = 10000
 
     chunk_size = file_size / desired_num_chunks
 

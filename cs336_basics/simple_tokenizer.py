@@ -5,11 +5,12 @@ import time
 import multiprocessing
 from typing import List, Dict, Tuple, Iterable, Iterator
 from tqdm import tqdm
-from cs336_basics.train_bpe import train_bpe
+from cs336_basics.train_bpe import read_txt_file, pretokenize  # Import only what we need
 import psutil
 import regex as re
+import numpy as np
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -55,13 +56,59 @@ class Tokenizer:
         self.logger.info(f"Loaded vocabulary size: {len(self.vocab)}")
         self.logger.info(f"Loaded special tokens count: {len(self.special_tokens)}")
     
+    def pretokenize_file(self, input_path: str, output_path: str, use_parallel: bool = True) -> None:
+        """
+        Pretokenize a text file and save the token IDs as a numpy array.
+        
+        Args:
+            input_path: Path to the input text file
+            output_path: Path to save the pretokenized data
+            use_parallel: Whether to use parallel pretokenization (better for large files)
+        """
+        self.logger.info(f"Pretokenizing file: {input_path}")
+        start_time = time.time()
+        
+        if use_parallel:
+            # use parallelized pretokenization for large files
+            self.logger.info("Starting parallel pretokenization...")
+            pretoken_freq = read_txt_file(input_path, self.max_workers, self.special_tokens)
+            self.logger.info(f"Found {len(pretoken_freq)} unique pretokens")
+            
+            # pretokens -> token IDs
+            all_token_ids = []
+            total_pretokens = sum(pretoken_freq.values())
+            self.logger.info(f"Processing {total_pretokens} total pretokens")
+            
+            for pretoken, freq in pretoken_freq.items():
+                # decode the entire pretoken at once
+                text = b''.join(pretoken).decode('utf-8')
+                token_ids = self.encode(text)
+                all_token_ids.extend(token_ids * freq)
+            
+            token_ids = all_token_ids
+            self.logger.info(f"Generated {len(token_ids)} total token IDs")
+        else:
+            # for small files, use a simpler approach
+            self.logger.info("Using simple pretokenization...")
+            with open(input_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+                self.logger.info(f"Read {len(text)} characters")
+                token_ids = self.encode(text)
+                self.logger.info(f"Generated {len(token_ids)} token IDs")
+        
+        # save as numpy array
+        np.save(output_path, np.array(token_ids, dtype=np.int32))
+        
+        end_time = time.time()
+        self.logger.info(f"Pretokenization completed in {end_time - start_time:.2f} seconds")
+        self.logger.info(f"Saved {len(token_ids)} tokens to {output_path}")
+    
     @staticmethod
     def get_pairs(word: tuple[bytes, ...]) -> set[tuple[bytes, bytes]]:
         pairs = set()
         for i in range(len(word)-1):
             pairs.add((word[i], word[i+1]))
         return pairs
-
 
     def apply_bpe(self, byte_seq: List[bytes]) -> List[bytes]:
         word = tuple(byte_seq)
@@ -159,7 +206,6 @@ class Tokenizer:
         tokenizer = cls(vocab=vocab, merges=merges, special_tokens=special_tokens)
         logger.info(f"Successfully loaded tokenizer with vocabulary size: {len(vocab)}")
         return tokenizer
-    
     
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
         """convert an iterable of strings to an iterable of token IDs"""
