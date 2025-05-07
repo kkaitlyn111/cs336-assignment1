@@ -1,3 +1,25 @@
+
+# kaitlyn custom files
+.bash_history
+.bash_logout
+.bashrc
+.profile
+.python_history
+.viminfo
+.lesshst
+.netrc
+.ssh/
+.config/
+.local/
+.cursor-server/
+.vscode/
+.vscode-server/
+batch_jobs/
+*.out
+*.err
+logs/
+
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
