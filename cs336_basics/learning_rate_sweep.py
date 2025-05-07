@@ -52,7 +52,6 @@ def run_lr_sweep(
         args.pretokens_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
         
         args.vocab_size = 10000
-<<<<<<< HEAD
         args.context_length = 256
         args.batch_size = 64
         args.d_model = 512
@@ -61,16 +60,6 @@ def run_lr_sweep(
         args.d_ff = 1344
         args.max_steps = 10000
         args.max_seq_len = 512 # must be greater than context_length
-=======
-        args.context_length = 128
-        args.batch_size = 8
-        args.d_model = 256
-        args.num_heads = 4
-        args.num_layers = 2
-        args.d_ff = 64
-        args.max_steps = 1000
-        args.max_seq_len = 256  # must be greater than context_length
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
         args.min_loss_threshold = 1.45
         
         # adjust eval freq to get validation points
@@ -152,23 +141,10 @@ if __name__ == "__main__":
         #project_name="transformer-lm-lr-sweep-v5" 
 
         # try to get a good result
-<<<<<<< HEAD
-<<<<<<< HEAD
         min_test_lr=5e-5,  
         max_test_lr=5e-2,  
         num_runs=8,   
         project_name="transformer-lm-lr-sweep-cluster-v3-bigmodel-8" 
-=======
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-        min_test_lr=5e-3,  
-        max_test_lr=5e-3,  
-        num_runs=1,   
-        project_name="transformer-lm-lr-sweep-v4" 
-<<<<<<< HEAD
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 
