@@ -10,8 +10,8 @@ from tqdm import tqdm
 import time
 
 def run_lr_sweep(
-    min_test_lr=1e-5,
-    max_test_lr=1e-3,
+    min_test_lr=5e-6,
+    max_test_lr=5e-3,
     num_runs=5,
     project_name="transformer-lm-lr-sweep"
 ):
@@ -20,6 +20,9 @@ def run_lr_sweep(
     """
     # exponentially spaced learning rates
     learning_rates = np.exp(np.linspace(np.log(min_test_lr), np.log(max_test_lr), num_runs))
+    learning_rates = np.insert(learning_rates, 0, 1e-7)
+    learning_rates = np.insert(learning_rates, -1, 1e-2)
+
     
     results = {
         'learning_rates': learning_rates.tolist(),
@@ -40,7 +43,7 @@ def run_lr_sweep(
         args = parse_args()
         args.learning_rate = lr
         args.max_lr = lr
-        args.min_lr = 10e-5
+        args.min_lr = lr/1000
         args.wandb_project = project_name
         args.experiment_name = f"lr_{lr:.2e}"  # Add learning rate to experiment name
         
@@ -49,16 +52,17 @@ def run_lr_sweep(
         args.valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt" 
         args.vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
         args.merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
-        args.pretokens_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
+        args.pretokens_train_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
+        args.pretokens_valid_path = "/data/c-kaitwang/tinystories_valid_pretokens.npy" 
         
         args.vocab_size = 10000
         args.context_length = 256
-        args.batch_size = 64
+        args.batch_size = 128
         args.d_model = 512
         args.num_heads = 16
         args.num_layers = 4
         args.d_ff = 1344
-        args.max_steps = 10000
+        args.max_steps = 2000
         args.max_seq_len = 512 # must be greater than context_length
         args.min_loss_threshold = 1.45
         
@@ -68,7 +72,7 @@ def run_lr_sweep(
         
         args.device = "cuda"
         args.use_compile = False
-        args.use_memmap = True
+        args.use_memmap = False
         args.use_parallel_pretokenize = True
         
         try:
@@ -141,10 +145,10 @@ if __name__ == "__main__":
         #project_name="transformer-lm-lr-sweep-v5" 
 
         # try to get a good result
-        min_test_lr=5e-5,  
-        max_test_lr=5e-2,  
-        num_runs=8,   
-        project_name="transformer-lm-lr-sweep-cluster-v3-bigmodel-8" 
+        min_test_lr=5e-6,  
+        max_test_lr=5e-3,  
+        num_runs=6,   
+        project_name="transformer-lm-lr-sweep-good" 
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 

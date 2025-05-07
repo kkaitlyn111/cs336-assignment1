@@ -9,10 +9,10 @@ import wandb
 from tqdm import tqdm
 import time
 
-import debugpy
-debugpy.listen(("0.0.0.0", 5678))  # Listen on all interfaces, port 5678
-print("Waiting for debugger attach...")
-debugpy.wait_for_client()  # Pause execution until debugger is attached
+# import debugpy
+# debugpy.listen(("0.0.0.0", 5678))  # Listen on all interfaces, port 5678
+# print("Waiting for debugger attach...")
+# debugpy.wait_for_client()  # Pause execution until debugger is attached
 
 def run_batch_sweep(
     min_test_batch=1,
@@ -25,7 +25,7 @@ def run_batch_sweep(
     """
 
     # batch_sizes = [1, 64, 128, 1024, 4096, 10000]
-    batch_sizes = [32]
+    batch_sizes = [1, 64, 128, 1024, 4096, 10000]
     # try to get to GPU limit
 
     #learning_rates = np.exp(np.linspace(np.log(min_test_batch), np.log(max_test_batch), num_runs))
@@ -60,13 +60,13 @@ def run_batch_sweep(
         args.pretokens_valid_path = "/data/c-kaitwang/tinystories_valid_pretokens.npy" 
         
         args.vocab_size = 10000
-        args.context_length = 128
-        args.d_model = 128
-        args.num_heads = 4
+        args.context_length = 256
+        args.d_model = 512
+        args.num_heads = 16
         args.num_layers = 4
-        args.d_ff = 512
-        args.max_steps = 2000
-        args.max_seq_len = 128 # must be greater than context_length
+        args.d_ff = 1344
+        args.max_steps = 5000
+        args.max_seq_len = 512 # must be greater than context_length
         args.min_loss_threshold = 1.45
         args.learning_rate=5e-4
         
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         min_test_batch=1,  
         max_test_batch=10000,  
         num_runs=5,   
-        project_name="transformer-lm-gen-text" 
+        project_name="transformer-lm-batchsize-sweep-good" 
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 
