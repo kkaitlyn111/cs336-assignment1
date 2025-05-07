@@ -51,7 +51,7 @@ def parse_args():
     parser.add_argument("--beta1", type=float, default=0.9)
     parser.add_argument("--beta2", type=float, default=0.999)
     parser.add_argument("--gradient_clip_M", type=float, default=5.0)
-    parser.add_argument("--min_lr", type=float, default=1e-6)
+    parser.add_argument("--min_lr", type=float, default=1e-7)
     parser.add_argument("--max_lr", type=float, default=1e-4)
     parser.add_argument("--max_steps", type=int, default=5000)
     parser.add_argument("--min_loss_threshold", type=int, default=2)
@@ -192,6 +192,7 @@ def main(args=None):
         theta=args.rope_theta,
         device=device
     )
+    model = model.to(device) 
     
     print("Created model.")
 

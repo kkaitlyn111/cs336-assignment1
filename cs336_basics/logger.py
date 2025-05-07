@@ -51,9 +51,8 @@ class ExperimentLogger:
         
         wandb.log({
             'train/loss': loss,
-            'train/step': step,
             'train/wallclock_time': current_time
-        })
+        }, step=step)
     
     def log_validation(self, loss: float, step: int):
         """log validation metrics"""
@@ -66,9 +65,8 @@ class ExperimentLogger:
         
         wandb.log({
             'val/loss': loss,
-            'val/step': step,
             'val/wallclock_time': current_time
-        })
+        }, step=step)
     
     def log_hyperparameters(self, hyperparams: Dict[str, Any]):
         """log hyperparameters to wandb"""
