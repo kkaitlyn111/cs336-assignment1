@@ -9,20 +9,29 @@ import wandb
 from tqdm import tqdm
 import time
 
-def run_lr_sweep(
-    min_test_lr=1e-5,
-    max_test_lr=1e-3,
-    num_runs=5,
-    project_name="transformer-lm-lr-sweep"
+import debugpy
+debugpy.listen(("0.0.0.0", 5678))  # Listen on all interfaces, port 5678
+print("Waiting for debugger attach...")
+debugpy.wait_for_client()  # Pause execution until debugger is attached
+
+def run_batch_sweep(
+    min_test_batch=1,
+    max_test_batch=4096,
+    num_runs=4,
+    project_name="transformer-lm-batch-sweep"
 ):
     """
-    Run a LR sweep with exponentially spaced learning rates using existing training loop
+    Run a batch size sweep from 1 to GPU memory limit using existing training loop. 
     """
-    # exponentially spaced learning rates
-    learning_rates = np.exp(np.linspace(np.log(min_test_lr), np.log(max_test_lr), num_runs))
+
+    # batch_sizes = [1, 64, 128, 1024, 4096, 10000]
+    batch_sizes = [32]
+    # try to get to GPU limit
+
+    #learning_rates = np.exp(np.linspace(np.log(min_test_batch), np.log(max_test_batch), num_runs))
     
     results = {
-        'learning_rates': learning_rates.tolist(),
+        'batch_sizes': batch_sizes,
         'final_losses': [],
         'best_losses': [],
         'final_steps': [],
@@ -31,47 +40,35 @@ def run_lr_sweep(
     }
     
     # results directory
-    results_dir = Path("lr_sweep_results")
+    results_dir = Path("batch_sweep_results")
     results_dir.mkdir(exist_ok=True)
     
 
-    for lr in tqdm(learning_rates, desc="Running learning rate sweep"):
+    for batch in tqdm(batch_sizes, desc="Running batch sweep"):
         # override LR args
         args = parse_args()
-        args.learning_rate = lr
-        args.max_lr = lr
-        args.min_lr = 10e-5
+        args.batch_size = batch
         args.wandb_project = project_name
-        args.experiment_name = f"lr_{lr:.2e}"  # Add learning rate to experiment name
+        args.experiment_name = f"batch_{batch}"  # Add learning rate to experiment name
         
         # base tinystories configs
         args.train_path = "/data/a1-basics/TinyStoriesV2-GPT4-train.txt"
         args.valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt" 
         args.vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
         args.merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
-        args.pretokens_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
+        args.pretokens_train_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
+        args.pretokens_valid_path = "/data/c-kaitwang/tinystories_valid_pretokens.npy" 
         
         args.vocab_size = 10000
-<<<<<<< HEAD
-        args.context_length = 256
-        args.batch_size = 64
-        args.d_model = 512
-        args.num_heads = 16
-        args.num_layers = 4
-        args.d_ff = 1344
-        args.max_steps = 10000
-        args.max_seq_len = 512 # must be greater than context_length
-=======
         args.context_length = 128
-        args.batch_size = 8
-        args.d_model = 256
+        args.d_model = 128
         args.num_heads = 4
-        args.num_layers = 2
-        args.d_ff = 64
-        args.max_steps = 1000
-        args.max_seq_len = 256  # must be greater than context_length
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+        args.num_layers = 4
+        args.d_ff = 512
+        args.max_steps = 2000
+        args.max_seq_len = 128 # must be greater than context_length
         args.min_loss_threshold = 1.45
+        args.learning_rate=5e-4
         
         # adjust eval freq to get validation points
         args.eval_freq = args.max_steps // 50  # evaluate more frequently
@@ -79,7 +76,7 @@ def run_lr_sweep(
         
         args.device = "cuda"
         args.use_compile = False
-        args.use_memmap = True
+        args.use_memmap = False
         args.use_parallel_pretokenize = True
         
         try:
@@ -92,10 +89,10 @@ def run_lr_sweep(
             results['divergence_reasons'].append(metrics.get('divergence_reason', None))
             
             if metrics['diverged']:
-                print(f"Run with lr={lr} diverged: {metrics.get('divergence_reason', 'unknown reason')}")
+                print(f"Run with batch={batch} diverged: {metrics.get('divergence_reason', 'unknown reason')}")
             
         except Exception as e:
-            print(f"Run with lr={lr} failed with error: {str(e)}")
+            print(f"Run with batch={batch} failed with error: {str(e)}")
             results['final_losses'].append(float('inf'))
             results['best_losses'].append(float('inf'))
             results['final_steps'].append(0)
@@ -109,27 +106,27 @@ def run_lr_sweep(
     # initialize sweep logger after all runs are complete
     sweep_logger = ExperimentLogger(
         project_name=project_name,
-        experiment_name="lr_sweep",
+        experiment_name="batch_sweep",
         config={
-            'min_test_lr': min_test_lr,
-            'max_test_lr': max_test_lr,
+            'min_batch': min_test_batch,
+            'max_batch': max_test_batch,
             'num_runs': num_runs,
             'results': results
         }
     )
     
     # log all results at once
-    for lr, final_loss, diverged in zip(results['learning_rates'], results['final_losses'], results['diverged']):
+    for batch, final_loss, diverged in zip(results['batch_sizes'], results['final_losses'], results['diverged']):
         if not diverged:  # Only log non-diverged runs
-            sweep_logger.log_validation(final_loss, lr)
+            sweep_logger.log_validation(final_loss, batch)
     
     sweep_logger.finish()
     
     # summary
-    print("\nLearning Rate Sweep Summary:")
+    print("\nBatch Size Sweep Summary:")
     print("----------------------------")
-    for lr, final_loss, best_loss, diverged, reason in zip(
-        results['learning_rates'], 
+    for batch, final_loss, best_loss, diverged, reason in zip(
+        results['batch_sizes'], 
         results['final_losses'], 
         results['best_losses'],
         results['diverged'],
@@ -137,14 +134,14 @@ def run_lr_sweep(
     ):
         status = "DIVERGED" if diverged else "SUCCESS"
         if diverged:
-            print(f"LR: {lr:.2e} - {status} ({reason})")
+            print(f"BATCH SIZE: {batch} - {status} ({reason})")
         else:
-            print(f"LR: {lr:.2e} - {status} - Final Loss: {final_loss:.4f}, Best Loss: {best_loss:.4f}")
+            print(f"BATCH SIZE: {batch} - {status} - Final Loss: {final_loss:.4f}, Best Loss: {best_loss:.4f}")
     
     return results
 
 if __name__ == "__main__":
-    results = run_lr_sweep(
+    results = run_batch_sweep(
         # try wide range to get it to diverge
         #min_lr=1e-8,  
         #max_lr=1e-1,  
@@ -152,20 +149,21 @@ if __name__ == "__main__":
         #project_name="transformer-lm-lr-sweep-v5" 
 
         # try to get a good result
-<<<<<<< HEAD
-        min_test_lr=5e-5,  
-        max_test_lr=5e-2,  
-        num_runs=8,   
-        project_name="transformer-lm-lr-sweep-cluster-v3-bigmodel-8" 
-=======
-        min_test_lr=5e-3,  
-        max_test_lr=5e-3,  
-        num_runs=1,   
-        project_name="transformer-lm-lr-sweep-v4" 
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+        min_test_batch=1,  
+        max_test_batch=10000,  
+        num_runs=5,   
+        project_name="transformer-lm-gen-text" 
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 
         #num_runs=8,   # try 8 different learning rates
         #project_name="transformer-lm-lr-sweep-v3"  
     ) 
+
+    # Uncomment to run batch size sweep
+    # results = run_batchsize_sweep(
+    #     min_batch=8,
+    #     max_batch=1024,
+    #     num_runs=6,
+    #     project_name="transformer-lm-batchsize-sweep-v1"
+    # ) 

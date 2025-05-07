@@ -8,6 +8,7 @@ from collections import Counter
 from multiprocessing import Pool
 import multiprocessing
 import time
+import pickle
 
 
 logging.basicConfig(level=logging.INFO, format='%(levelname)s - %(message)s')
@@ -15,23 +16,31 @@ PRETOKENIZE_REGEX = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]
 DEFAULT_NUM_TOKENS = 256
 
 
-def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str], num_workers: int = None, progress_bar: bool = True) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
+def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str], num_workers: int = None, progress_bar: bool = True, pretoken_file: str = None) -> tuple[dict[int, bytes], list[tuple[bytes, bytes]]]:
     logger = logging.getLogger(__name__)
     total_start_time = time.time()
     
     if num_workers is None:
         num_workers = multiprocessing.cpu_count()
+    logger.info(f"Using {num_workers} worker processes")
     
     # vocab initialization
     vocab = {i: bytes([i]) for i in range(DEFAULT_NUM_TOKENS)}
     vocab.update({DEFAULT_NUM_TOKENS + i: special.encode("UTF-8") for i, special in enumerate(special_tokens)})
 
-    # pretokenization
-    logger.info("Reading and pretokenizing input file")
-    pretoken_start_time = time.time()
-    pretoken_freq = read_txt_file(input_path, num_workers, special_tokens)
-    pretokenization_time = time.time() - pretoken_start_time
-    logger.info(f"Pretokenization completed in {pretokenization_time:.2f} seconds")
+    # pretokenization or load from file
+    if pretoken_file is not None:
+        logger.info(f"Loading pretoken frequency table from {pretoken_file}")
+        with open(pretoken_file, "rb") as f:
+            pretoken_freq = pickle.load(f)
+        logger.info(f"Loaded {len(pretoken_freq)} unique pretokens from file")
+        pretokenization_time = 0.0
+    else:
+        logger.info("Reading and pretokenizing input file")
+        pretoken_start_time = time.time()
+        pretoken_freq = read_txt_file(input_path, num_workers, special_tokens)
+        pretokenization_time = time.time() - pretoken_start_time
+        logger.info(f"Pretokenization completed in {pretokenization_time:.2f} seconds")
     
     # pair frequency initialization
     pair_freq = initialize_pair_frequency(pretoken_freq)
@@ -49,15 +58,17 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str], num_w
     }
     
     pbar = tqdm(total=target_merges, desc="Training BPE", disable=not progress_bar)
+    merge_num = 0
     try:
         while(len(vocab) < vocab_size):
+            # logger.info(f"Starting merge {merge_num+1}/{target_merges} (vocab size: {len(vocab)}, pairs: {len(pair_freq)})")
             merge_iter_start = time.time()
-            
             # time finding the most frequent pair
             find_max_start = time.time()
             most_freq = max(pair_freq.items(), key=lambda x: (x[1], x[0]))[0]
-            merge_stats['find_max_pair'].append(time.time() - find_max_start)
-            
+            find_max_time = time.time() - find_max_start
+            # logger.info(f"Found most frequent pair in {find_max_time:.2f} seconds: {most_freq}")
+            merge_stats['find_max_pair'].append(find_max_time)
             merges.append(most_freq)
             new_vocab_id = max(vocab.keys()) + 1
             new_token = b"".join(most_freq)
@@ -113,9 +124,13 @@ def train_bpe(input_path: str, vocab_size: int, special_tokens: list[str], num_w
             
             update_time = time.time() - update_pretoken_start
             merge_stats['update_pretoken_freq'].append((update_time, pretoken_count, pair_updates))
-            
+            #logger.info(f"Updated pretoken frequencies in {update_time:.2f} seconds (pretoken_count={pretoken_count}, pair_updates={pair_updates})")
             del pair_freq[most_freq]
             pretoken_freq = new_pretoken_freq
+            merge_time = time.time() - merge_iter_start
+            #logger.info(f"Completed merge {merge_num+1} in {merge_time:.2f} seconds")
+            merge_num += 1
+            pbar.update(1)
     
         total_merge_time = time.time() - merge_start_time
         logger.info(f"\nBPE training completed in {total_merge_time:.2f} seconds")
@@ -176,12 +191,14 @@ def read_txt_file(input_path: str, num_workers: int, special_tokens: list[str]):
         }
         
         with Pool(num_workers) as pool:
-            results = pool.starmap(process_chunk, chunk_args)
-            for local_freq_table, chunk_time, stats in results:
-                full_freq_table.update(local_freq_table)
-                chunk_times.append(chunk_time)
-                for key in chunk_stats:
-                    chunk_stats[key].extend(stats[key])
+            # Add a progress bar for chunk processing
+            with tqdm(total=len(chunk_args), desc="Pretokenizing chunks") as pbar:
+                for local_freq_table, chunk_time, stats in pool.starmap(process_chunk, chunk_args):
+                    full_freq_table.update(local_freq_table)
+                    chunk_times.append(chunk_time)
+                    for key in chunk_stats:
+                        chunk_stats[key].extend(stats[key])
+                    pbar.update(1)
 
         # log detailed pretokenization statistics
         logger.info("\nPretokenization Statistics:")
@@ -195,7 +212,9 @@ def process_chunk(input_path: str, start: int, end: int, special_tokens: list[st
     """
     process a single chunk of the file
     """
+    logger = logging.getLogger(__name__)
     chunk_start_time = time.time()
+    #logger.info(f"Starting process_chunk: {start} to {end}")
     split_pattern = "(" + "|".join(map(re.escape, special_tokens)) + ")"
     freq_table = Counter()
     
@@ -214,19 +233,21 @@ def process_chunk(input_path: str, start: int, end: int, special_tokens: list[st
                 if piece in special_tokens:
                     continue
                     
-                # Time pretokenization
+                # time pretokenization
                 pretoken_start = time.time()
                 pretokenized = pretokenize(piece)
                 stats['pretokenize_time'].append(time.time() - pretoken_start)
                 
-                # Time encoding and frequency counting
+                # time encoding and frequency counting
                 encoding_start = time.time()
+              
                 for pretoken, count in pretokenized.items():
                     key = tuple(bytes([b]) for b in pretoken.encode("utf-8"))
                     freq_table[key] += count
                 stats['encoding_time'].append(time.time() - encoding_start)
-            
+        #logger.info(f"Finished process_chunk: {start} to {end}")
     except Exception as e:
+        logger.error(f"Exception in process_chunk ({start} to {end}): {e}")
         raise
     
     chunk_time = time.time() - chunk_start_time

@@ -5,11 +5,16 @@ import time
 import multiprocessing
 from typing import List, Dict, Tuple, Iterable, Iterator
 from tqdm import tqdm
-from cs336_basics.train_bpe import train_bpe
+<<<<<<< HEAD
+from cs336_basics.train_bpe import * # Import only what we need
+=======
+from cs336_basics.train_bpe import read_txt_file, pretokenize  # Import only what we need
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 import psutil
 import regex as re
+import numpy as np
 
-# Configure logging
+# configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
@@ -55,13 +60,72 @@ class Tokenizer:
         self.logger.info(f"Loaded vocabulary size: {len(self.vocab)}")
         self.logger.info(f"Loaded special tokens count: {len(self.special_tokens)}")
     
+    def pretokenize_file(self, input_path: str, output_path: str, use_parallel: bool = True) -> None:
+        """
+        Pretokenize a text file and save the token IDs as a numpy array.
+        
+        Args:
+            input_path: Path to the input text file
+            output_path: Path to save the pretokenized data
+            use_parallel: Whether to use parallel pretokenization (better for large files)
+        """
+        self.logger.info(f"Pretokenizing file: {input_path}")
+        start_time = time.time()
+        
+        if use_parallel:
+            # use parallelized pretokenization for large files
+            self.logger.info("Starting parallel pretokenization...")
+<<<<<<< HEAD
+            from cs336_basics.train_bpe import read_txt_file
+=======
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+            pretoken_freq = read_txt_file(input_path, self.max_workers, self.special_tokens)
+            self.logger.info(f"Found {len(pretoken_freq)} unique pretokens")
+            
+            # pretokens -> token IDs
+            all_token_ids = []
+            total_pretokens = sum(pretoken_freq.values())
+            self.logger.info(f"Processing {total_pretokens} total pretokens")
+            
+<<<<<<< HEAD
+            with tqdm(total=len(pretoken_freq), desc="Encoding pretokens") as pbar:
+                for pretoken, freq in pretoken_freq.items():
+                    text = b''.join(pretoken).decode('utf-8')
+                    token_ids = self.encode(text)
+                    all_token_ids.extend(token_ids * freq)
+                    pbar.update(1)
+=======
+            for pretoken, freq in pretoken_freq.items():
+                # decode the entire pretoken at once
+                text = b''.join(pretoken).decode('utf-8')
+                token_ids = self.encode(text)
+                all_token_ids.extend(token_ids * freq)
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+            
+            token_ids = all_token_ids
+            self.logger.info(f"Generated {len(token_ids)} total token IDs")
+        else:
+            # for small files, use a simpler approach
+            self.logger.info("Using simple pretokenization...")
+            with open(input_path, 'r', encoding='utf-8') as f:
+                text = f.read()
+                self.logger.info(f"Read {len(text)} characters")
+                token_ids = self.encode(text)
+                self.logger.info(f"Generated {len(token_ids)} token IDs")
+        
+        # save as numpy array
+        np.save(output_path, np.array(token_ids, dtype=np.int32))
+        
+        end_time = time.time()
+        self.logger.info(f"Pretokenization completed in {end_time - start_time:.2f} seconds")
+        self.logger.info(f"Saved {len(token_ids)} tokens to {output_path}")
+    
     @staticmethod
     def get_pairs(word: tuple[bytes, ...]) -> set[tuple[bytes, bytes]]:
         pairs = set()
         for i in range(len(word)-1):
             pairs.add((word[i], word[i+1]))
         return pairs
-
 
     def apply_bpe(self, byte_seq: List[bytes]) -> List[bytes]:
         word = tuple(byte_seq)
@@ -105,6 +169,8 @@ class Tokenizer:
                 tok = m.group(0)
                 b_list = [bytes([b]) for b in tok.encode("utf-8")]
                 for piece in self.apply_bpe(b_list):
+                    if piece not in self.vocab_inverse:
+                        print(f"Unknown piece: {piece}")
                     ids.append(self.vocab_inverse[piece])
             return ids
 
@@ -133,12 +199,16 @@ class Tokenizer:
 
         for part, is_special in parts:
             if is_special:
+                if part.encode("utf-8") not in self.vocab_inverse:
+                    print(f"Unknown special token: {part}")
                 ids.append(self.vocab_inverse[part.encode("utf-8")])
             else:
                 for m in self._token_re.finditer(part):
                     tok = m.group(0)
                     b_list = [bytes([b]) for b in tok.encode("utf-8")]
                     for piece in self.apply_bpe(b_list):
+                        if piece not in self.vocab_inverse:
+                            print(f"Unknown piece: {piece}")
                         ids.append(self.vocab_inverse[piece])
         
         return ids
@@ -159,7 +229,6 @@ class Tokenizer:
         tokenizer = cls(vocab=vocab, merges=merges, special_tokens=special_tokens)
         logger.info(f"Successfully loaded tokenizer with vocabulary size: {len(vocab)}")
         return tokenizer
-    
     
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
         """convert an iterable of strings to an iterable of token IDs"""

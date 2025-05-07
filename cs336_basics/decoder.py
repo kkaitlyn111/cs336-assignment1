@@ -9,35 +9,35 @@ def decode(model: TransformerLM, tokenizer: Tokenizer, prompt: str, new_tokens_l
     device = model.device
     context_length = model.context_length
     
-    # Initialize generation
+    # initialize generation
     generated_ids = input_ids.copy()
     model.eval()
     
     with torch.no_grad():
         for _ in range(new_tokens_limit):
-            # Prepare input
+            # prepare input
             if len(generated_ids) > context_length:
                 input_ids = generated_ids[-context_length:]
             else:
                 input_ids = generated_ids
             
-            # Convert to tensor and get model output
+            # convert to tensor and get model output
             input_tensor = torch.tensor(input_ids, device=device).unsqueeze(0)
             logits = model(input_tensor)
             
-            # Get next token probabilities
+            # get next token probabilities
             next_token_logits = logits[0, -1, :]
             
-            # Apply temperature
+            # apply temperature
             if temperature > 0:
                 next_token_logits = next_token_logits / temperature
             
-            # Apply top-p (nucleus) sampling
+            # apply top-p (nucleus) sampling
             if top_p < 1.0:
                 sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
                 cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
                 
-                # Remove tokens with cumulative probability above the threshold
+                # remove tokens with cumulative prob above threshold
                 sorted_indices_to_remove = cumulative_probs > top_p
                 sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
                 sorted_indices_to_remove[..., 0] = 0
@@ -45,18 +45,17 @@ def decode(model: TransformerLM, tokenizer: Tokenizer, prompt: str, new_tokens_l
                 indices_to_remove = sorted_indices[sorted_indices_to_remove]
                 next_token_logits[indices_to_remove] = float('-inf')
             
-            # Sample next token
+            # sample next token
             probs = torch.softmax(next_token_logits, dim=-1)
             next_token = torch.multinomial(probs, num_samples=1).item()
             
-            # Append to generated sequence
+            # append to generated sequence
             generated_ids.append(next_token)
             
-            # Stop if we hit the end token
+            # stop if we hit the end token
             if next_token == stop_token:
                 break
     
-    # Decode and return the generated text
     return tokenizer.decode(generated_ids)
 
 def generate_text(model: TransformerLM, tokenizer: Tokenizer, prompt: str, **kwargs):

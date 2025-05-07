@@ -1,0 +1,20 @@
+{
+  "batch_sizes": [
+    32
+  ],
+  "final_losses": [
+    3.7177713423967362
+  ],
+  "best_losses": [
+    1.1473917469382287
+  ],
+  "final_steps": [
+    1999
+  ],
+  "diverged": [
+    false
+  ],
+  "divergence_reasons": [
+    null
+  ]
+}

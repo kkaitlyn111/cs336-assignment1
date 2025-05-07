@@ -14,46 +14,41 @@ class ExperimentLogger:
         log_dir: str = "logs"
     ):
         """
-        Initialize the experiment logger.
+        initialize experiment logger
         
-        Args:
-            project_name: Name of the wandb project
-            experiment_name: Optional name for this specific experiment
-            config: Dictionary of experiment configuration
-            log_dir: Directory to save local logs
+        args:
+            config: a dictionary of configs
+            log_dir: directory to save logs
         """
         self.start_time = time.time()
         self.log_dir = log_dir
         os.makedirs(log_dir, exist_ok=True)
         
-        # Initialize wandb
         self.run = wandb.init(
             project=project_name,
             name=experiment_name or datetime.now().strftime("%Y%m%d_%H%M%S"),
             config=config or {}
         )
         
-        # Save config locally
+        # save config locally
         self.config_path = os.path.join(log_dir, f"{self.run.name}_config.json")
         with open(self.config_path, 'w') as f:
             json.dump(config or {}, f, indent=2)
         
-        # Initialize metrics
         self.metrics = {
             'train': {'loss': [], 'steps': [], 'time': []},
             'val': {'loss': [], 'steps': [], 'time': []}
         }
     
     def log_train_step(self, loss: float, step: int):
-        """Log training metrics for a single step."""
+        """log training metrics for a single step"""
         current_time = time.time() - self.start_time
         
-        # Update local metrics
+        # update local metrics and log to wandb
         self.metrics['train']['loss'].append(loss)
         self.metrics['train']['steps'].append(step)
         self.metrics['train']['time'].append(current_time)
         
-        # Log to wandb
         wandb.log({
             'train/loss': loss,
             'train/step': step,
@@ -61,15 +56,14 @@ class ExperimentLogger:
         })
     
     def log_validation(self, loss: float, step: int):
-        """Log validation metrics."""
+        """log validation metrics"""
         current_time = time.time() - self.start_time
         
-        # Update local metrics
+        # update local metrics and log to wandb
         self.metrics['val']['loss'].append(loss)
         self.metrics['val']['steps'].append(step)
         self.metrics['val']['time'].append(current_time)
         
-        # Log to wandb
         wandb.log({
             'val/loss': loss,
             'val/step': step,
@@ -77,22 +71,22 @@ class ExperimentLogger:
         })
     
     def log_hyperparameters(self, hyperparams: Dict[str, Any]):
-        """Log hyperparameters to wandb."""
+        """log hyperparameters to wandb"""
         wandb.config.update(hyperparams)
     
     def save_metrics(self):
-        """Save metrics to local file."""
+        """save metrics to local file"""
         metrics_path = os.path.join(self.log_dir, f"{self.run.name}_metrics.json")
         with open(metrics_path, 'w') as f:
             json.dump(self.metrics, f, indent=2)
     
     def finish(self):
-        """Finish the experiment and save all data."""
+        """finish the experiment and save all data"""
         self.save_metrics()
         wandb.finish()
     
     def get_experiment_summary(self) -> Dict[str, Any]:
-        """Get a summary of the experiment."""
+        """get a summary of the experiment"""
         return {
             'name': self.run.name,
             'config': self.run.config,
@@ -104,11 +98,7 @@ class ExperimentLogger:
 
 def create_experiment_log(experiments: list[Dict[str, Any]], output_file: str = "experiment_log.md"):
     """
-    Create a markdown file documenting all experiments.
-    
-    Args:
-        experiments: List of experiment summaries
-        output_file: Path to save the markdown file
+    create a single file documenting all experiments
     """
     with open(output_file, 'w') as f:
         f.write("# Experiment Log\n\n")

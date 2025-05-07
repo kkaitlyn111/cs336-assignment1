@@ -18,7 +18,7 @@ batch_jobs/
 *.out
 *.err
 logs/
-
+cs336_basics/wandb/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

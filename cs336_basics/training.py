@@ -42,20 +42,22 @@ def get_cosine_lr(t: int, alpha_min: float, alpha_max: float, Tw: int, Tc: int) 
     return alpha_t
 
 def gradient_clipping(params: list[torch.Tensor], M: float, eps: float = 1e-6) -> None:
-    grads = [p.grad for p in params if p is not None and p.grad is not None]
-    all_grads = torch.cat(grads, dim = 0)
+    grads = [p.grad.flatten() for p in params if p is not None and p.grad is not None]
+    all_grads = torch.cat(grads, dim=0)
     norm = torch.norm(all_grads)
 
     if norm >= M:
         for p in params:
             if p is not None and p.grad is not None:
-                p.grad *=  M/(norm + eps)
+                p.grad *= M/(norm + eps)
 
-def save_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer, iteration: int, out: str | os.PathLike | BinaryIO | IO[bytes]):
+def save_checkpoint(model: torch.nn.Module, optimizer: torch.optim.Optimizer, iteration: int, out: str | os.PathLike | BinaryIO | IO[bytes], run_info: dict = None):
     saved = {}
     saved['model'] = model.state_dict()
     saved['optimizer'] = optimizer.state_dict()
     saved['iteration'] = iteration 
+    if run_info is not None:
+        saved['run_info'] = run_info
     torch.save(saved, out)
 
 def load_checkpoint(src: str | os.PathLike | BinaryIO | IO[bytes], model: torch.nn.Module, optimizer: torch.optim.Optimizer) -> int:
@@ -64,6 +66,7 @@ def load_checkpoint(src: str | os.PathLike | BinaryIO | IO[bytes], model: torch.
     optimizer.load_state_dict(saved['optimizer'])
     return saved['iteration']
     
+
 
 
 
