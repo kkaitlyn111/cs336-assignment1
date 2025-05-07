@@ -9,13 +9,14 @@ from cs336_basics.decoder import generate_text
 vocab_size = 10000
 context_length = 128
 d_model = 128
-num_heads = 2
-num_layers = 1
-d_ff = 256
+num_heads = 4
+num_layers = 4
+d_ff = 512
 max_steps = 2000
 max_seq_len = 128 # must be greater than context_length
 
 rope_theta = 10000
+
 device = torch.device("cuda")
 
 # 1. Load your trained model checkpoint
@@ -33,6 +34,8 @@ model = TransformerLM(
     theta=rope_theta,
     device=device
 )
+
+model = model.to(device)
 
 # Load state_dict from checkpoint
 checkpoint = torch.load(checkpoint_path, map_location=device, weights_only = False)
@@ -54,7 +57,7 @@ output = generate_text(
     model, tokenizer, prompt,
     new_tokens_limit=256,   
     temperature=0.8,       # increase -> more creative 
-    top_p=0.9      # increase -> more diverse
+    top_p=0.8      # increase -> more diverse
 )
 
 print("Generated text:\n", output)
