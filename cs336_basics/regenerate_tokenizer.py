@@ -3,6 +3,7 @@ import torch
 from cs336_basics.train_bpe import train_bpe
 from cs336_basics.simple_tokenizer import Tokenizer
 <<<<<<< HEAD
+<<<<<<< HEAD
 from cs336_basics.pretokenization_example import pretokenize_file_only
 import time
 import numpy as np
@@ -14,6 +15,8 @@ print("Waiting for debugger attach...")
 debugpy.wait_for_client()
 =======
 >>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+=======
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
 def regenerate_tokenizer():
     # Check for CUDA availability
@@ -23,6 +26,7 @@ def regenerate_tokenizer():
     
     # Paths for the large TinyStories dataset
     train_path = "/data/a1-basics/TinyStoriesV2-GPT4-train.txt"
+<<<<<<< HEAD
 <<<<<<< HEAD
     valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt"
     vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
@@ -110,6 +114,8 @@ def regenerate_tokenizer():
         print(f"- Merges: {merges_path}")
         print(f"- Pretokens: {pretokens_path}")
 =======
+=======
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
     merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
     pretokens_path = "/data/c-kaitwang/tinystories_pretokens.npy"
@@ -142,6 +148,9 @@ def regenerate_tokenizer():
     print(f"- Vocabulary: {vocab_path}")
     print(f"- Merges: {merges_path}")
     print(f"- Pretokens: {pretokens_path}")
+<<<<<<< HEAD
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+=======
 >>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
 if __name__ == "__main__":

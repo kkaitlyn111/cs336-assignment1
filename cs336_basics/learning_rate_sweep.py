@@ -153,15 +153,21 @@ if __name__ == "__main__":
 
         # try to get a good result
 <<<<<<< HEAD
+<<<<<<< HEAD
         min_test_lr=5e-5,  
         max_test_lr=5e-2,  
         num_runs=8,   
         project_name="transformer-lm-lr-sweep-cluster-v3-bigmodel-8" 
 =======
+=======
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
         min_test_lr=5e-3,  
         max_test_lr=5e-3,  
         num_runs=1,   
         project_name="transformer-lm-lr-sweep-v4" 
+<<<<<<< HEAD
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
+=======
 >>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
         #min_lr=1e-5,  

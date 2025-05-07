@@ -28,9 +28,15 @@ def find_chunk_boundaries(
     # Calculate desired number of chunks based on file size
     # Aim for chunks of roughly 1MB each
 <<<<<<< HEAD
+<<<<<<< HEAD
     #target_chunk_size = 1024 * 1024  # 1MB
     #desired_num_chunks = max(1, min(1000, file_size // target_chunk_size))
     desired_num_chunks = 5000
+=======
+    # target_chunk_size = 1024 * 1024  # 1MB
+    # desired_num_chunks = max(1, min(1000, file_size // target_chunk_size))
+    desired_num_chunks = 10000
+>>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 =======
     # target_chunk_size = 1024 * 1024  # 1MB
     # desired_num_chunks = max(1, min(1000, file_size // target_chunk_size))
