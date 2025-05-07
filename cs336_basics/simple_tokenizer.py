@@ -5,15 +5,7 @@ import time
 import multiprocessing
 from typing import List, Dict, Tuple, Iterable, Iterator
 from tqdm import tqdm
-<<<<<<< HEAD
-<<<<<<< HEAD
 from cs336_basics.train_bpe import * # Import only what we need
-=======
-from cs336_basics.train_bpe import read_txt_file, pretokenize  # Import only what we need
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
-from cs336_basics.train_bpe import read_txt_file, pretokenize  # Import only what we need
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 import psutil
 import regex as re
 import numpy as np
@@ -79,13 +71,7 @@ class Tokenizer:
         if use_parallel:
             # use parallelized pretokenization for large files
             self.logger.info("Starting parallel pretokenization...")
-<<<<<<< HEAD
-<<<<<<< HEAD
             from cs336_basics.train_bpe import read_txt_file
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
             pretoken_freq = read_txt_file(input_path, self.max_workers, self.special_tokens)
             self.logger.info(f"Found {len(pretoken_freq)} unique pretokens")
             
@@ -94,26 +80,12 @@ class Tokenizer:
             total_pretokens = sum(pretoken_freq.values())
             self.logger.info(f"Processing {total_pretokens} total pretokens")
             
-<<<<<<< HEAD
-<<<<<<< HEAD
             with tqdm(total=len(pretoken_freq), desc="Encoding pretokens") as pbar:
                 for pretoken, freq in pretoken_freq.items():
                     text = b''.join(pretoken).decode('utf-8')
                     token_ids = self.encode(text)
                     all_token_ids.extend(token_ids * freq)
                     pbar.update(1)
-=======
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-            for pretoken, freq in pretoken_freq.items():
-                # decode the entire pretoken at once
-                text = b''.join(pretoken).decode('utf-8')
-                token_ids = self.encode(text)
-                all_token_ids.extend(token_ids * freq)
-<<<<<<< HEAD
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
             
             token_ids = all_token_ids
             self.logger.info(f"Generated {len(token_ids)} total token IDs")
