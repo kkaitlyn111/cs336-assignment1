@@ -21,12 +21,8 @@ def parse_args():
     parser.add_argument("--valid_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/data/TinyStoriesV2-GPT4-valid.txt")
     parser.add_argument("--vocab_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/tinystories_vocab.pkl")
     parser.add_argument("--merges_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/tinystories_merges.pkl")
-<<<<<<< HEAD
     parser.add_argument("--pretokens_train_path", type=str, default="/data/c-kaitwang/tinystories_pretokens.npy", help="Path to pretokenized training data")
     parser.add_argument("--pretokens_valid_path", type=str, default="/data/c-kaitwang/tinystories_valid_pretokens.npy", help="Path to pretokenized validation data")
-=======
-    parser.add_argument("--pretokens_path", type=str, default = "data/tinystories_pretokens.npy")  # Default for full dataset
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     parser.add_argument("--reuse_pretokens", action="store_true", default = True, help="Reuse existing pretokenized data if available")
 
     # data loading params
@@ -34,11 +30,7 @@ def parse_args():
     parser.add_argument("--context_length", type=int, default = 256)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
-<<<<<<< HEAD
     parser.add_argument("--use_memmap", type=bool, default=False)
-=======
-    parser.add_argument("--use_memmap", type=bool, default=True)
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     parser.add_argument("--use_parallel_pretokenize", type=bool, default=True)  # Default to parallel for full dataset
 
     parser.add_argument("--special_tokens", type=str, nargs="+", default=["<|endoftext|>"])
@@ -54,22 +46,13 @@ def parse_args():
 
     # training and optimizer params
     parser.add_argument("--learning_rate", type=float, default=1e-4)
-<<<<<<< HEAD
     parser.add_argument("--weight_decay", type=float, default=0.1)
-=======
-    parser.add_argument("--weight_decay", type=float, default=0.001)
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     parser.add_argument("--epsilon", type=float, default=1e-8)
     parser.add_argument("--beta1", type=float, default=0.9)
     parser.add_argument("--beta2", type=float, default=0.999)
     parser.add_argument("--gradient_clip_M", type=float, default=5.0)
-<<<<<<< HEAD
     parser.add_argument("--min_lr", type=float, default=1e-6)
     parser.add_argument("--max_lr", type=float, default=1e-4)
-=======
-    parser.add_argument("--min_lr", type=float, default=1e-5)
-    parser.add_argument("--max_lr", type=float, default=2e-4)
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     parser.add_argument("--max_steps", type=int, default=5000)
     parser.add_argument("--min_loss_threshold", type=int, default=2)
 
@@ -116,7 +99,6 @@ def evaluate(model, valid_data, args, device, n_batches=10):
     model.eval()
     losses = []
     with torch.no_grad():
-<<<<<<< HEAD
         max_start = len(valid_data) - args.context_length - 1
         for _ in range(n_batches):
             start = np.random.randint(0, max_start)
@@ -127,11 +109,6 @@ def evaluate(model, valid_data, args, device, n_batches=10):
             logits = model(inputs)
             loss = cross_entropy_loss(logits, targets)
             losses.append(loss.item())
-=======
-        inputs, targets = load_batch(valid_data, args.batch_size, args.context_length, device)
-        logits = model(inputs)
-        loss = cross_entropy_loss(logits, targets)
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     model.train()
     return sum(losses) / len(losses)
 
@@ -155,7 +132,6 @@ def main(args=None):
         torch.set_float32_matmul_precision("high")
     else:
         torch.set_float32_matmul_precision("medium")
-<<<<<<< HEAD
     
     # load tokenizer from files
     tokenizer = Tokenizer.from_files(args.vocab_path, args.merges_path, special_tokens=args.special_tokens)
@@ -204,39 +180,6 @@ def main(args=None):
         train_data = load_data_memmap(args.pretokens_train_path)
         valid_data = load_data_memmap(args.pretokens_valid_path)
     
-=======
-    
-    # load tokenizer from files
-    tokenizer = Tokenizer.from_files(args.vocab_path, args.merges_path, special_tokens=args.special_tokens)
-
-    # reuse or create fresh pretokenized data
-    if os.path.exists(args.pretokens_path):
-        if args.reuse_pretokens:
-            print(f"Reusing existing pretokenized data from: {args.pretokens_path}")
-            pretokenize_needed = False
-        else:
-            print(f"Existing pretokenized data found but fresh tokenization requested")
-    
-    if pretokenize_needed:
-        print(f"Creating fresh pretokenized training data...")
-        tokenizer.pretokenize_file(
-            args.train_path, 
-            args.pretokens_path, 
-            use_parallel=args.use_parallel_pretokenize
-        )
-        print(f"Saved fresh pretokenized data to: {args.pretokens_path}")
-    
-    # load data based on the specified method
-    if not args.use_memmap:
-        print("Loading data into regular memory...")
-        train_data = load_data_regular(args.pretokens_path)
-        valid_data = load_data_regular(args.pretokens_path)  # using same file for validation for test mode rn
-    else:
-        print("Loading data using memory mapping...")
-        train_data = load_data_memmap(args.pretokens_path)
-        valid_data = load_data_memmap(args.pretokens_path)   # using same file for validation for test mode rn
-    
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     # create model
     model = TransformerLM(
         d_model=args.d_model,
@@ -251,7 +194,6 @@ def main(args=None):
     )
     
     print("Created model.")
-<<<<<<< HEAD
 
     print("Max token ID in valid_data:", valid_data.max())
     print("Min token ID in valid_data:", valid_data.min())
@@ -260,8 +202,6 @@ def main(args=None):
     print("Max token ID in train_data:", train_data.max())
     print("Min token ID in train_data:", train_data.min())
     print("Model vocab size:", model.vocab_size)
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     
     # compile model if enabled
     if args.use_compile:
@@ -281,11 +221,7 @@ def main(args=None):
     
     # training loop
     best_val_loss = float('inf')
-<<<<<<< HEAD
     patience = 50  # number of evaluations without improvement before stopping
-=======
-    patience = 20  # number of evaluations without improvement before stopping
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     no_improvement_count = 0
     min_loss_threshold = args.min_loss_threshold  # stop if loss gets below this threshold
     
@@ -375,13 +311,10 @@ def main(args=None):
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
                 no_improvement_count = 0
-<<<<<<< HEAD
                 run_info = {
                     "save_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
                     "wandb_run_name": getattr(logger, "experiment_name", None)
                 }
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
                 save_checkpoint(
                     model,
                     optimizer,
@@ -410,23 +343,16 @@ def main(args=None):
             )
     
     # save final model
-<<<<<<< HEAD
     run_info = {
         "save_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
         "wandb_run_name": getattr(logger, "experiment_name", None)
     }
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     save_checkpoint(
         model,
         optimizer,
         step,  # use actual step instead of max_steps
-<<<<<<< HEAD
         os.path.join(args.checkpoint_dir, "final_model.pt"),
         run_info=run_info
-=======
-        os.path.join(args.checkpoint_dir, "final_model.pt")
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
     )
     
     # finish logging

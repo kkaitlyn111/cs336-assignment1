@@ -2,8 +2,6 @@ import os
 import torch
 from cs336_basics.train_bpe import train_bpe
 from cs336_basics.simple_tokenizer import Tokenizer
-<<<<<<< HEAD
-<<<<<<< HEAD
 from cs336_basics.pretokenization_example import pretokenize_file_only
 import time
 import numpy as np
@@ -13,10 +11,6 @@ import debugpy
 debugpy.listen(("0.0.0.0", 5678))
 print("Waiting for debugger attach...")
 debugpy.wait_for_client()
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
 def regenerate_tokenizer():
     # Check for CUDA availability
@@ -26,8 +20,6 @@ def regenerate_tokenizer():
     
     # Paths for the large TinyStories dataset
     train_path = "/data/a1-basics/TinyStoriesV2-GPT4-train.txt"
-<<<<<<< HEAD
-<<<<<<< HEAD
     valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt"
     vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
     merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
@@ -113,45 +105,6 @@ def regenerate_tokenizer():
         print(f"- Vocabulary: {vocab_path}")
         print(f"- Merges: {merges_path}")
         print(f"- Pretokens: {pretokens_path}")
-=======
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-    vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
-    merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
-    pretokens_path = "/data/c-kaitwang/tinystories_pretokens.npy"
-    
-    # Parameters for BPE training
-    vocab_size = 10000
-    special_tokens = ["<|endoftext|>"]
-    
-    print("Starting BPE training...")
-    vocab, merges = train_bpe(
-        input_path=train_path,
-        vocab_size=vocab_size,
-        special_tokens=special_tokens,
-        num_workers=4,  # Using 4 workers for stability
-        progress_bar=True
-    )
-    
-    print("\nSaving vocabulary and merges...")
-    tokenizer = Tokenizer(vocab=vocab, merges=merges, special_tokens=special_tokens)
-    tokenizer.save(vocab_path, merges_path)
-    
-    print("\nGenerating pretokens...")
-    tokenizer.pretokenize_file(
-        input_path=train_path,
-        output_path=pretokens_path,
-        use_parallel=True
-    )
-    
-    print("\nDone! Files have been regenerated:")
-    print(f"- Vocabulary: {vocab_path}")
-    print(f"- Merges: {merges_path}")
-    print(f"- Pretokens: {pretokens_path}")
-<<<<<<< HEAD
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
-=======
->>>>>>> ebe672e7df2604172e5fc64531dc1d0a3eeaa5d3
 
 if __name__ == "__main__":
     regenerate_tokenizer() 
