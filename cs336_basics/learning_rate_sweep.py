@@ -19,9 +19,10 @@ def run_lr_sweep(
     Run a LR sweep with exponentially spaced learning rates using existing training loop
     """
     # exponentially spaced learning rates
-    learning_rates = np.exp(np.linspace(np.log(min_test_lr), np.log(max_test_lr), num_runs))
-    learning_rates = np.insert(learning_rates, 0, 1e-7)
-    learning_rates = np.insert(learning_rates, -1, 1e-2)
+    #learning_rates = np.exp(np.linspace(np.log(min_test_lr), np.log(max_test_lr), num_runs))
+    #learning_rates = np.insert(learning_rates, 0, 1e-7)
+    learning_rates = np.array([1e-2])
+    #learning_rates = np.insert(learning_rates, -1, 1e-2)
 
     
     results = {
@@ -43,7 +44,7 @@ def run_lr_sweep(
         args = parse_args()
         args.learning_rate = lr
         args.max_lr = lr
-        args.min_lr = lr/1000
+        args.min_lr = lr/10
         args.wandb_project = project_name
         args.experiment_name = f"lr_{lr:.2e}"  # Add learning rate to experiment name
         

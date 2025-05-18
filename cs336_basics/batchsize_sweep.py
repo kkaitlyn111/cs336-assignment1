@@ -25,7 +25,8 @@ def run_batch_sweep(
     """
 
     # batch_sizes = [1, 64, 128, 1024, 4096, 10000]
-    batch_sizes = [1, 64, 128, 1024, 4096, 10000]
+    #batch_sizes = [1, 64, 128, 1024, 4096, 10000]
+    batch_sizes = [256]
     # try to get to GPU limit
 
     #learning_rates = np.exp(np.linspace(np.log(min_test_batch), np.log(max_test_batch), num_runs))
@@ -52,14 +53,15 @@ def run_batch_sweep(
         args.experiment_name = f"batch_{batch}"  # Add learning rate to experiment name
         
         # base tinystories configs
-        args.train_path = "/data/a1-basics/TinyStoriesV2-GPT4-train.txt"
-        args.valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt" 
-        args.vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
-        args.merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
-        args.pretokens_train_path = "/data/c-kaitwang/tinystories_pretokens.npy" 
-        args.pretokens_valid_path = "/data/c-kaitwang/tinystories_valid_pretokens.npy" 
+        # args.train_path = "/data/a1-basics/TinyStoriesV2-GPT4-train.txt"
+        # args.valid_path = "/data/a1-basics/TinyStoriesV2-GPT4-valid.txt" 
+        args.vocab_path = "/data/c-kaitwang/owt_vocab.pkl"
+        args.merges_path = "/data/c-kaitwang/owt_merges.pkl"
+        args.pretokens_train_path = "/data/c-kaitwang/owt_train_pretokens.npy" 
+        args.pretokens_valid_path = "/data/c-kaitwang/owt_valid_pretokens.npy" 
+        args.reuse_pretokens = True
         
-        args.vocab_size = 10000
+        args.vocab_size = 30000
         args.context_length = 256
         args.d_model = 512
         args.num_heads = 16
@@ -68,7 +70,10 @@ def run_batch_sweep(
         args.max_steps = 5000
         args.max_seq_len = 512 # must be greater than context_length
         args.min_loss_threshold = 1.45
-        args.learning_rate=5e-4
+
+        args.learning_rate=5e-2
+        args.max_lr = 1e-1
+        args.min_lr = 1e-2
         
         # adjust eval freq to get validation points
         args.eval_freq = args.max_steps // 50  # evaluate more frequently
@@ -152,7 +157,7 @@ if __name__ == "__main__":
         min_test_batch=1,  
         max_test_batch=10000,  
         num_runs=5,   
-        project_name="transformer-lm-batchsize-sweep-good" 
+        project_name="transformer-lm-owt-test" 
 
         #min_lr=1e-5,  
         #max_lr=1e-2, 
