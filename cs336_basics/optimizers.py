@@ -22,28 +22,28 @@ class SGD(torch.optim.Optimizer):
     def step(self, closure: Optional[Callable] = None): 
         loss = None if closure is None else closure()
         for group in self.param_groups:
-            lr = group["lr"] # Get the learning rate. 
+            lr = group["lr"] # get the learning rate
   
             for p in group["params"]: 
                 if p.grad is None:
                     continue
 
-                state = self.state[p] # Get state associated with p.
-                t = state.get("t", 0) # Get iteration number from the state, or initial value. 	
-                grad = p.grad.data # Get the gradient of loss with respect to p.
-                p.data -= lr / math.sqrt(t + 1) * grad # Update weight tensor in-place. 
-                state["t"] = t + 1 # Increment iteration number.
+                state = self.state[p] 
+                t = state.get("t", 0) 
+                grad = p.grad.data 
+                p.data -= lr / math.sqrt(t + 1) * grad # update weight tensor in-place
+                state["t"] = t + 1 
         return loss
     
 def training_loop():
     weights = torch.nn.Parameter(5 * torch.randn((10, 10)))
     opt = SGD([weights], lr=1)
     for t in range(100):
-        opt.zero_grad() # Reset the gradients for all learnable parameters. 
-        loss = (weights**2).mean() # Compute a scalar loss value. 
+        opt.zero_grad() # reset the gradients for all learnable parameters
+        loss = (weights**2).mean() # compute a scalar loss value
         print(loss.cpu().item())
-        loss.backward() # Run backward pass, which computes gradients. 
-        opt.step() # Run optimizer step.
+        loss.backward() # run backward pass, which computes gradients
+        opt.step() 
 
 	
 
@@ -78,9 +78,9 @@ class AdamW(Optimizer):
                 state = self.state[p]
                 if len(state) == 0:
                     state['step'] = 0
-                    # Initialize first moment (momentum) - m in the algorithm
+                    # initialize first moment (momentum) - m in the algorithm
                     state['exp_avg'] = torch.zeros_like(p.data)
-                    # Initialize second moment (variance) - v in the algorithm
+                    # initialize second moment (variance) - v in the algorithm
                     state['exp_avg_sq'] = torch.zeros_like(p.data)
                 
                 # get current internal state

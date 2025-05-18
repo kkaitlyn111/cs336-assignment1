@@ -57,7 +57,7 @@ def parse_args():
     parser.add_argument("--min_loss_threshold", type=int, default=2)
     parser.add_argument("--warmup_steps", type=int, default=270)
 
-    # Logging and checkpointing
+    # logging and checkpointing
     parser.add_argument("--checkpoint_dir", type=str, default="/data/c-kaitwang/checkpoints")
     parser.add_argument("--wandb_project", type=str, default="transformer-lm")
     parser.add_argument("--log_freq", type=int, default=100)
@@ -142,7 +142,6 @@ def main(args=None):
     ids = tokenizer.encode(s)
     print(tokenizer.decode(ids))
 
-    # Pre-tokenization logic for training data
     if args.reuse_pretokens and os.path.exists(args.pretokens_train_path):
         print(f"Reusing existing pretokenized training data from: {args.pretokens_train_path}")
     else:
@@ -154,7 +153,6 @@ def main(args=None):
         )
         print(f"Saved fresh pretokenized training data to: {args.pretokens_train_path}")
 
-    # Pre-tokenization logic for validation data
     if args.reuse_pretokens and os.path.exists(args.pretokens_valid_path):
         print(f"Reusing existing pretokenized validation data from: {args.pretokens_valid_path}")
     else:
@@ -222,28 +220,28 @@ def main(args=None):
     no_improvement_count = 0
     min_loss_threshold = args.min_loss_threshold  # stop if loss gets below this threshold
     
-    # Stability tracking
-    val_losses = []  # Keep track of recent validation losses
-    stability_window = 5  # Number of recent validation losses to check
-    stability_threshold = 0.01  # Maximum allowed relative change between consecutive losses
+    # stability tracking
+    val_losses = []  
+    stability_window = 5  # num recent validation losses to check
+    stability_threshold = 0.01  # max allowed relative change between consecutive losses
     
-    # Divergence detection
-    divergence_threshold = 100.0  # Loss threshold for divergence
-    last_losses = []  # Keep track of recent losses
-    window_size = 10  # Increased from 5 to 10 for more stability
-    min_increase = 0.1  # Minimum relative increase to consider as divergence
+    # divergence detection
+    divergence_threshold = 100.0  # loss threshold for divergence
+    last_losses = []  
+    window_size = 10  # increased from 5 to 10
+    min_increase = 0.1  # min relative increase to consider as divergence
     
     pbar = tqdm(range(args.max_steps), desc="Training")
     for step in pbar:
         # training
         train_loss = train_step(model, optimizer, train_data, args, device)
         
-        # Check for divergence
+        # check for divergence
         last_losses.append(train_loss)
         if len(last_losses) > window_size:
             last_losses.pop(0)
         
-        # If loss is too high or increasing rapidly, consider it diverged
+        # if loss is too high or increasing rapidly, consider it diverged
         if train_loss > divergence_threshold:
             print(f"\nTraining diverged at step {step} with loss {train_loss:.4f}")
             return {
@@ -254,7 +252,7 @@ def main(args=None):
                 'divergence_reason': 'loss_too_high'
             }
         
-        # Check for consistent increase with minimum threshold
+        # check for consistent increase with minimum threshold
         if len(last_losses) == window_size:
             increases = [last_losses[i+1] - last_losses[i] for i in range(len(last_losses)-1)]
             relative_increases = [inc / last_losses[i] for i, inc in enumerate(increases)]

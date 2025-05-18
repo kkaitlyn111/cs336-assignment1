@@ -4,7 +4,7 @@ from cs336_basics.transformer import TransformerLM
 from cs336_basics.simple_tokenizer import Tokenizer
 from cs336_basics.decoder import generate_text
 
-# Model and tokenizer hyperparameters (from training_loop.py)
+# model and tokenizer hyperparameters (from training_loop.py)
 
 vocab_size = 30000
 context_length = 256
@@ -19,10 +19,10 @@ rope_theta = 10000
 
 device = torch.device("cuda")
 
-# 1. Load your trained model checkpoint
+# load trained model checkpoint -- best model or final model
 checkpoint_path = "/data/c-kaitwang/checkpoints/best_model.pt"
 
-# 2. Initialize the model
+# initialize the model
 model = TransformerLM(
     d_model=d_model,
     num_heads=num_heads,
@@ -37,7 +37,7 @@ model = TransformerLM(
 
 model = model.to(device)
 
-# Load state_dict from checkpoint
+# load state_dict from checkpoint
 checkpoint = torch.load(checkpoint_path, map_location=device, weights_only = False)
 print(checkpoint.get("run_info", "No run info found"))
 model.load_state_dict(checkpoint['model'])

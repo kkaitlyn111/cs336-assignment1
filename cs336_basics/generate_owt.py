@@ -1,7 +1,6 @@
 import os
 import torch
 from cs336_basics.train_bpe import train_bpe
-from cs336_basics.train_bpe_fast import train_bpe_fast
 from cs336_basics.simple_tokenizer import Tokenizer
 from cs336_basics.pretokenization_example import pretokenize_file_only
 import time
@@ -76,7 +75,7 @@ def generate_owt():
     #)
 
     print("Now BPE training...")
-    vocab, merges = train_bpe_fast(input_path = train_path, vocab_size = vocab_size, special_tokens = special_tokens, pretokens_internal_path=pretokens_internal_path)
+    vocab, merges = train_bpe(input_path = train_path, vocab_size = vocab_size, special_tokens = special_tokens, pretokens_internal_path=pretokens_internal_path)
 
 
     # vocab, merges = train_bpe(
@@ -99,14 +98,14 @@ def generate_owt():
 
     print("\nGenerating training pretoken token IDs using trained tokenizer with progress bar...")
 
-    # Count total lines for progress bar
+    # count total lines for progress bar
     with open(train_path, 'r', encoding='utf-8') as f:
         total_lines = sum(1 for _ in f)
 
     max_lines = total_lines  # process up to this many lines
     num_workers = min(64, multiprocessing.cpu_count())
     
-    # Split line indices into chunks
+    # split line indices into chunks
     chunk_size = (max_lines + num_workers - 1) // num_workers
     chunks = [
         (i * chunk_size, min((i + 1) * chunk_size, max_lines), train_path, vocab_path, merges_path, special_tokens)
@@ -137,7 +136,7 @@ def generate_owt():
 
     print("\nGenerating validation pretoken token IDs using trained tokenizer with progress bar...")
 
-        # Count total lines for progress bar
+        # count total lines for progress bar
     with open(valid_path, 'r', encoding='utf-8') as f:
         total_lines = sum(1 for _ in f)
 

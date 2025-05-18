@@ -191,7 +191,7 @@ def read_txt_file(input_path: str, num_workers: int, special_tokens: list[str]):
         }
         
         with Pool(num_workers) as pool:
-            # Add a progress bar for chunk processing
+            # add a progress bar for chunk processing
             with tqdm(total=len(chunk_args), desc="Pretokenizing chunks") as pbar:
                 for local_freq_table, chunk_time, stats in pool.starmap(process_chunk, chunk_args):
                     full_freq_table.update(local_freq_table)

@@ -3,7 +3,7 @@ import torch
 from cs336_basics.transformer import TransformerLM
 
 def test_model_forward():
-    # Example model parameters (adjust as needed)
+    # Example model parameters 
     d_model = 512
     num_heads = 16
     d_ff = 1344
