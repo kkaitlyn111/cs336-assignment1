@@ -21,12 +21,12 @@ def parse_args():
     parser.add_argument("--valid_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/data/TinyStoriesV2-GPT4-valid.txt")
     parser.add_argument("--vocab_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/tinystories_vocab.pkl")
     parser.add_argument("--merges_path", type=str, default = "/Users/kaitlynwang/assignment1-basics/tinystories_merges.pkl")
-    parser.add_argument("--pretokens_train_path", type=str, default="/data/c-kaitwang/tinystories_pretokens.npy", help="Path to pretokenized training data")
-    parser.add_argument("--pretokens_valid_path", type=str, default="/data/c-kaitwang/tinystories_valid_pretokens.npy", help="Path to pretokenized validation data")
+    parser.add_argument("--pretokens_train_path", type=str, default="/data/a1-basics/openweb-train-tokenized.npy", help="Path to pretokenized training data")
+    parser.add_argument("--pretokens_valid_path", type=str, default="/data/a1-basics/openweb-valid-tokenized.npy", help="Path to pretokenized validation data")
     parser.add_argument("--reuse_pretokens", action="store_true", default = True, help="Reuse existing pretokenized data if available")
 
     # data loading params
-    parser.add_argument("--vocab_size", type=int, default = 10000)
+    parser.add_argument("--vocab_size", type=int, default = 30000)
     parser.add_argument("--context_length", type=int, default = 256)
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--num_workers", type=int, default=4)
@@ -49,12 +49,13 @@ def parse_args():
     parser.add_argument("--weight_decay", type=float, default=0.1)
     parser.add_argument("--epsilon", type=float, default=1e-8)
     parser.add_argument("--beta1", type=float, default=0.9)
-    parser.add_argument("--beta2", type=float, default=0.999)
+    parser.add_argument("--beta2", type=float, default=0.95)
     parser.add_argument("--gradient_clip_M", type=float, default=5.0)
-    parser.add_argument("--min_lr", type=float, default=1e-7)
-    parser.add_argument("--max_lr", type=float, default=1e-4)
+    parser.add_argument("--min_lr", type=float, default=5e-6)
+    parser.add_argument("--max_lr", type=float, default=5e-3)
     parser.add_argument("--max_steps", type=int, default=5000)
     parser.add_argument("--min_loss_threshold", type=int, default=2)
+    parser.add_argument("--warmup_steps", type=int, default=270)
 
     # Logging and checkpointing
     parser.add_argument("--checkpoint_dir", type=str, default="/data/c-kaitwang/checkpoints")
@@ -137,31 +138,26 @@ def main(args=None):
     tokenizer = Tokenizer.from_files(args.vocab_path, args.merges_path, special_tokens=args.special_tokens)
 
 
-    s = "Once upon a time there was a little boy named Ben. Ben loved to explore the world around him. He saw many amazing things, like beautiful vases that were on display in a store. One day, Ben was walking through the store when he came across a very special vase. When Ben saw it he was amazed! He said, “Wow, that is a really amazing vase! Can I buy it?” The shopkeeper smiled and said, “Of course you can. You can take it home and show all your friends how amazing it is!” So Ben took the vase home and he was so proud of it! He called his friends over and showed them the amazing vase. All his friends thought the vase was beautiful and couldn’t believe how lucky Ben was. And that’s how Ben found an amazing vase in the store!"
+    s = "Baseball Prospectus director of technology Harry Pavlidis took a risk when he hired Jonathan Judge.Pavlidis knew that, as Alan Schwarz wrote in The Numbers Game, “no corner of American culture is more precisely counted, more passionately quantified, than performances of baseball players.” With a few clicks here and there, you can findout that Noah Syndergaard’s fastball revolves more than 2,100 times per minute on its way to the plate, that Nelson Cruz had the game’s highest average exit velocity among qualified hitters in 2016 and myriad other tidbits that seem ripped from a video game or science fiction novel. The rising ocean of data has empowered an increasingly important actor in baseball’s culture: the analytical hobbyist."
     ids = tokenizer.encode(s)
     print(tokenizer.decode(ids))
 
-    # reuse or create fresh pretokenized data
-    if os.path.exists(args.pretokens_train_path):
-        if args.reuse_pretokens:
-            print(f"Reusing existing pretokenized training data from: {args.pretokens_train_path}")
-            pretokenize_needed = False
-        else:
-            print(f"Existing pretokenized training data found but fresh tokenization requested")
+    # Pre-tokenization logic for training data
+    if args.reuse_pretokens and os.path.exists(args.pretokens_train_path):
+        print(f"Reusing existing pretokenized training data from: {args.pretokens_train_path}")
     else:
-        pretokenize_needed = True
-
-    if pretokenize_needed:
         print(f"Creating fresh pretokenized training data...")
         tokenizer.pretokenize_file(
-            args.train_path, 
-            args.pretokens_train_path, 
+            args.train_path,
+            args.pretokens_train_path,
             use_parallel=args.use_parallel_pretokenize
         )
         print(f"Saved fresh pretokenized training data to: {args.pretokens_train_path}")
 
-    # Validation pretokenization (optional, only if not present)
-    if not os.path.exists(args.pretokens_valid_path):
+    # Pre-tokenization logic for validation data
+    if args.reuse_pretokens and os.path.exists(args.pretokens_valid_path):
+        print(f"Reusing existing pretokenized validation data from: {args.pretokens_valid_path}")
+    else:
         print(f"Creating fresh pretokenized validation data...")
         tokenizer.pretokenize_file(
             args.valid_path,
@@ -277,7 +273,7 @@ def main(args=None):
             step,
             args.min_lr,
             args.max_lr,
-            args.max_steps // 20,  # warmup steps 5% of max_steps
+            args.warmup_steps,  # warmup steps 5% of max_steps
             args.max_steps
         )
         for param_group in optimizer.param_groups:

@@ -6,21 +6,21 @@ from cs336_basics.decoder import generate_text
 
 # Model and tokenizer hyperparameters (from training_loop.py)
 
-vocab_size = 10000
-context_length = 128
-d_model = 128
-num_heads = 4
+vocab_size = 30000
+context_length = 256
+d_model = 512
+num_heads = 16
 num_layers = 4
-d_ff = 512
-max_steps = 2000
-max_seq_len = 128 # must be greater than context_length
+d_ff = 1344
+max_steps = 5000
+max_seq_len = 512 # must be greater than context_length
 
 rope_theta = 10000
 
 device = torch.device("cuda")
 
 # 1. Load your trained model checkpoint
-checkpoint_path = "/data/c-kaitwang/checkpoints/final_model.pt"
+checkpoint_path = "/data/c-kaitwang/checkpoints/best_model.pt"
 
 # 2. Initialize the model
 model = TransformerLM(
@@ -44,20 +44,20 @@ model.load_state_dict(checkpoint['model'])
 model.eval()
 
 
-vocab_path = "/data/c-kaitwang/tinystories_vocab.pkl"
-merges_path = "/data/c-kaitwang/tinystories_merges.pkl"
+vocab_path = "/data/c-kaitwang/owt_vocab.pkl"
+merges_path = "/data/c-kaitwang/owt_merges.pkl"
 special_tokens = ["<|endoftext|>"]
 tokenizer = Tokenizer.from_files(vocab_path, merges_path, special_tokens=special_tokens)
 
 
-prompt = "Once upon a time there was a little boy named "
+prompt = "Education and learning are essential for children's "
 
 
 output = generate_text(
     model, tokenizer, prompt,
     new_tokens_limit=256,   
-    temperature=0.8,       # increase -> more creative 
-    top_p=0.8      # increase -> more diverse
+    temperature=0.9,       # increase -> more creative 
+    top_p=0.85      # increase -> more diverse
 )
 
 print("Generated text:\n", output)
