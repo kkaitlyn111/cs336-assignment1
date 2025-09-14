@@ -126,7 +126,7 @@ def run_scaled_dot_product_attention(
     """
 
     from cs336_basics.transformer import scaled_dot_product_attention
-    return run_scaled_dot_product_attention(Q, K, V, )
+    return scaled_dot_product_attention(Q=Q, K=K, V=V, mask=mask)
     raise NotImplementedError
 
 

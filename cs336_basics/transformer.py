@@ -114,20 +114,20 @@ def softmax(x: torch.Tensor, dim: int) -> torch.Tensor:
 # Q ... n d_k
 # K ... m d_k
 # V ... m d_v
-def scaled_dot_product_attention(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor, mask) -> torch.Tensor:
+def scaled_dot_product_attention(Q: torch.Tensor, K: torch.Tensor, V: torch.Tensor, mask: torch.Tensor | None = None) -> torch.Tensor:
     n = Q.size(dim=-2)
     d_k = Q.size(dim=-1)
     m = K.size(dim=-2)
     d_v = V.size(dim=-1)
     device = Q.device
 
-    inner_result = einsum(Q, K, '... n d_k, ... m d_k -> ... n m') / np.sqrt(d_k)
+    scores = einsum(Q, K, '... n d_k, ... m d_k -> ... n m') / np.sqrt(d_k)
     # i = torch.arange(n)
     # j = torch.arange(m)
     # mask = j <= i
-    
+    if mask is not None:
+        scores = scores.masked_fill(~mask, float('-inf'))
 
-    scores = inner_result.masked_fill(~mask, float('-inf'))
-    final = einsum(softmax(scores), V, '... n m, ... m d_v -> ... n d_v')
+    final = einsum(softmax(scores, dim=-1), V, '... n m, ... m d_v -> ... n d_v') # softmax all key scores (m dim), for each query (n)
     return final
 
