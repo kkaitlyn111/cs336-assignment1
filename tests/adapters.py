@@ -88,12 +88,9 @@ def run_swiglu(
     """
     from cs336_basics.transformer import SiLU, FFN
     ffn = FFN(d_model=d_model, d_ff=d_ff)
-    state_dict = {
-        'W1': w1_weight,
-        'W2': w2_weight,
-        'W3': w3_weight
-    }
-    ffn.load_state_dict(state_dict)
+    ffn.W1.W.data = w1_weight
+    ffn.W2.W.data = w2_weight
+    ffn.W3.W.data = w3_weight
     return ffn(in_features)
 
     # Example:
@@ -161,6 +158,16 @@ def run_multihead_self_attention(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
+    from cs336_basics.transformer import MultiHeadSelfAttention
+    MHSA = MultiHeadSelfAttention(d_model=d_model, num_heads=num_heads)
+    state_dict = {
+        'Wo.W': o_proj_weight,
+        'Wv.W': v_proj_weight,
+        'Wk.W': k_proj_weight,
+        'Wq.W': q_proj_weight
+    }
+    MHSA.load_state_dict(state_dict)
+    return MHSA(in_features)
     raise NotImplementedError
 
 
@@ -201,6 +208,16 @@ def run_multihead_self_attention_with_rope(
         Float[Tensor, " ... sequence_length d_out"]: Tensor with the output of running your optimized, batched multi-headed attention
         implementation with the given QKV projection weights and input features.
     """
+    from cs336_basics.transformer import MultiHeadSelfAttention
+    MHSA = MultiHeadSelfAttention(d_model=d_model, num_heads=num_heads, max_seq_len = max_seq_len, theta=theta, apply_rope=True, token_positions=token_positions)
+    state_dict = {
+        'Wo.W': o_proj_weight,
+        'Wv.W': v_proj_weight,
+        'Wk.W': k_proj_weight,
+        'Wq.W': q_proj_weight
+    }
+    MHSA.load_state_dict(state_dict)
+    return MHSA(in_features)
     raise NotImplementedError
 
 
@@ -326,7 +343,7 @@ def run_transformer_lm(
         num_heads (int): Number of heads to use in multi-headed attention. `d_model` must be
             evenly divisible by `num_heads`.
         d_ff (int): Dimensionality of the feed-forward inner layer (section 3.3).
-        rope_theta (float): The RoPE $\Theta$ parameter.
+        rope_theta (float): The RoPE parameter.
         weights (dict[str, Tensor]):
             State dict of our reference implementation. {num_layers} refers to an
             integer between `0` and `num_layers - 1` (the layer index).
