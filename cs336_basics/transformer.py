@@ -1,3 +1,4 @@
+from ast import Mult
 from re import X
 import torch
 from einops import rearrange, einsum, reduce, repeat
@@ -9,7 +10,7 @@ import math
 class Linear(nn.Module):
     def __init__(self, in_features: int, out_features: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
-        self.W = nn.Parameter(torch.randn(out_features, in_features))
+        self.W = nn.Parameter(torch.randn(out_features, in_features, device=device, dtype=dtype))
         std = np.sqrt(2.0 / (in_features + out_features))
         nn.init.trunc_normal_(self.W, mean=0, std=std, a= -3.0 * std, b = 3.0 * std)
 
@@ -20,7 +21,7 @@ class Linear(nn.Module):
 class Embedding(nn.Module):
     def __init__(self, num_embeddings: int, embedding_dim: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
-        self.embedding_matrix = nn.Parameter(torch.randn(num_embeddings, embedding_dim))
+        self.embedding_matrix = nn.Parameter(torch.randn(num_embeddings, embedding_dim, device=device, dtype=dtype))
         nn.init.trunc_normal_(self.embedding_matrix, mean = 0, std = 1, a=-3, b=3)
 
     def forward(self, token_ids: torch.LongTensor) ->  torch.Tensor:
@@ -29,7 +30,7 @@ class Embedding(nn.Module):
 class RMSNorm(nn.Module):
     def __init__(self, d_model: int, eps: float = 1e-5, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
-        self.g = nn.Parameter(torch.ones(d_model))
+        self.g = nn.Parameter(torch.ones(d_model, device=device, dtype=dtype))
         self.eps = eps # not a learnable param
         self.d_model = d_model
     
@@ -37,8 +38,7 @@ class RMSNorm(nn.Module):
         in_dtype = x.dtype
         x = x.to(torch.float32)
 
-        RMSa = torch.sqrt((reduce(x**2, '... d_model -> ...', 'sum') + self.eps)/self.d_model)
-        RMSa = rearrange(RMSa, '... -> ... 1')
+        RMSa = torch.sqrt(reduce(x**2, '... d_model -> ... 1', 'mean') + self.eps)
         RMSNorma = x / RMSa
         RMSNorma = RMSNorma * self.g
         return RMSNorma.to(in_dtype)
@@ -47,11 +47,11 @@ def SiLU(x: torch.Tensor) -> torch.Tensor:
     return x * torch.sigmoid(x)
     
 class FFN(nn.Module):
-    def __init__(self, d_model: int, d_ff: int):
+    def __init__(self, d_model: int, d_ff: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
-        self.W1 = Linear(in_features=d_ff, out_features=d_model)
-        self.W2 = Linear(in_features=d_model, out_features=d_ff)
-        self.W3 = Linear(in_features=d_ff, out_features=d_model)
+        self.W1 = Linear(in_features=d_model, out_features=d_ff, device = device, dtype = dtype)  
+        self.W2 = Linear(in_features=d_ff, out_features=d_model, device=device, dtype=dtype) 
+        self.W3 = Linear(in_features=d_model, out_features=d_ff, device=device, dtype=dtype) 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         w1x = self.W1(x)
@@ -61,7 +61,7 @@ class FFN(nn.Module):
         return result
     
 class RoPE(nn.Module):
-    def __init__(self, d_k: int, max_seq_len: int, theta: float | None = 1e-5, device: torch.device | None = None):
+    def __init__(self, d_k: int, max_seq_len: int, theta: float | None = 10000.0, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
         self.theta = theta
         self.d_k = d_k
@@ -100,7 +100,7 @@ class RoPE(nn.Module):
         return y
 
 def softmax(x: torch.Tensor, dim: int) -> torch.Tensor:
-    val, idx = torch.max(x, dim=dim, keepdim=True)
+    val, _ = torch.max(x, dim=dim, keepdim=True)
     x = x - val
     denom = torch.sum(torch.exp(x), dim=dim, keepdim=True)
     # import code; code.interact(local=locals())
@@ -127,7 +127,7 @@ def scaled_dot_product_attention(Q: torch.Tensor, K: torch.Tensor, V: torch.Tens
     return final
 
 class MultiHeadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int, max_seq_len: int | None = None, theta: float | None = None, apply_rope: bool | None = False, token_positions: torch.Tensor | None = None):
+    def __init__(self, d_model: int, num_heads: int, max_seq_len: int | None = None, theta: float | None = None, apply_rope: bool | None = False, token_positions: torch.Tensor | None = None, device: torch.device | None = None, dtype: torch.dtype | None = None):
         super().__init__()
 
         self.num_heads = num_heads
@@ -135,15 +135,20 @@ class MultiHeadSelfAttention(nn.Module):
         self.d_k = d_model // num_heads
         self.d_v = self.d_k
 
-        self.Wo = Linear(in_features=d_model, out_features=d_model)
-        self.Wq = Linear(in_features=d_model, out_features=d_model)
-        self.Wk = Linear(in_features=d_model, out_features=d_model)
-        self.Wv = Linear(in_features=d_model, out_features=d_model)
+        self.Wo = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.Wq = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.Wk = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
+        self.Wv = Linear(in_features=d_model, out_features=d_model, device=device, dtype=dtype)
 
         self.apply_rope = apply_rope
-
+        self.max_seq_len = max_seq_len
         self.theta = theta
         self.token_positions = token_positions
+        
+        if self.apply_rope and max_seq_len is not None:
+            self.rope = RoPE(d_k=self.d_k, max_seq_len=max_seq_len, theta=theta, device=device, dtype=dtype)
+        else:
+            self.rope = None
         
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -163,17 +168,22 @@ class MultiHeadSelfAttention(nn.Module):
         # each of these is [... h n d_k]
 
         if self.apply_rope:
-            rope = RoPE(d_k = self.d_k, max_seq_len = n, theta=self.theta, device=device)
+            if self.rope is not None:
+                rope = self.rope
+            else:
+                rope = RoPE(d_k=self.d_k, max_seq_len=self.max_seq_len, theta=self.theta, device=device, dtype=dtype)
+            
             # token_positions must be of shape [... seq_len] for RoPE
-            if self.token_positions is None:
-                self.token_positions = torch.arange(n)
-            Qi = rope(Qi, self.token_positions)
-            Ki = rope(Ki, self.token_positions)
+            token_positions = self.token_positions
+            if token_positions is None:
+                token_positions = torch.arange(n, device=device)
+            Qi = rope(Qi, token_positions)
+            Ki = rope(Ki, token_positions)
 
-        i = torch.arange(n, device=device, dtype=dtype).unsqueeze(1) # [n, 1]
-        j = torch.arange(n, device=device, dtype=dtype).unsqueeze(0) # [1, n]
+        i = torch.arange(n, device=device).unsqueeze(1) # [n, 1]
+        j = torch.arange(n, device=device).unsqueeze(0) # [1, n]
         mask = j <= i # [n, n]
-        mask.to(device=device, dtype=dtype)
+        mask = mask.to(device=device)
 
         # for masked_fill, the shapes have to be broadcastable to each other
         # currently scores is [... n n] and [n n], so that works out fine
@@ -188,6 +198,18 @@ class MultiHeadSelfAttention(nn.Module):
         return result
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self, d_model: int, num_heads: int, d_ff: int, max_seq_len: int, theta: int, device: torch.device | None = None, dtype: torch.dtype | None = None):
+        super().__init__()
+        self.ln1 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+        self.attn = MultiHeadSelfAttention(d_model=d_model, num_heads=num_heads, max_seq_len=max_seq_len, theta=theta, apply_rope=True, device=device, dtype=dtype)
+        self.ln2 = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+        self.ffn = FFN(d_model=d_model, d_ff = d_ff, device=device, dtype=dtype)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = x + self.attn(self.ln1(x))
+        x = x + self.ffn(self.ln2(x))
+        return x
 
 
 

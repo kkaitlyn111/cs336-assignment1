@@ -86,7 +86,7 @@ def run_swiglu(
     Returns:
         Float[Tensor, "... d_model"]: Output embeddings of the same shape as the input embeddings.
     """
-    from cs336_basics.transformer import SiLU, FFN
+    from cs336_basics.transformer import FFN
     ffn = FFN(d_model=d_model, d_ff=d_ff)
     ffn.W1.W.data = w1_weight
     ffn.W2.W.data = w2_weight
@@ -316,7 +316,32 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    from cs336_basics.transformer import TransformerBlock
+    device = in_features.device
+    dtype = in_features.dtype
+    block = TransformerBlock(d_model=d_model, num_heads=num_heads, d_ff=d_ff, max_seq_len=max_seq_len, theta=theta, device=device, dtype=dtype)
+    
+   
+    state_dict = {}
+    
+    # attention weights
+    state_dict['attn.Wq.W'] = weights['attn.q_proj.weight']
+    state_dict['attn.Wk.W'] = weights['attn.k_proj.weight'] 
+    state_dict['attn.Wv.W'] = weights['attn.v_proj.weight']
+    state_dict['attn.Wo.W'] = weights['attn.output_proj.weight']
+    
+    # layer norm weights
+    state_dict['ln1.g'] = weights['ln1.weight']
+    state_dict['ln2.g'] = weights['ln2.weight']
+    
+    # ffn weights 
+    state_dict['ffn.W1.W'] = weights['ffn.w1.weight']  
+    state_dict['ffn.W2.W'] = weights['ffn.w2.weight'] 
+    state_dict['ffn.W3.W'] = weights['ffn.w3.weight'] 
+    
+    block.load_state_dict(state_dict)
+    
+    return block(in_features)
 
 
 def run_transformer_lm(
