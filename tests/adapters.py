@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from calendar import c
 import os
 from collections.abc import Iterable
 from typing import IO, Any, BinaryIO
@@ -423,7 +424,42 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    from cs336_basics.transformer import TransformerLM
+    model = TransformerLM(vocab_size=vocab_size, context_length=context_length, d_model=d_model, num_layers=num_layers, num_heads=num_heads, d_ff=d_ff, theta=rope_theta)
+    
+    # Map the provided weights to your actual variable names
+    state_dict = {}
+    
+    # Token embeddings
+    state_dict['token_embeddings.embedding_matrix'] = weights['token_embeddings.weight']
+    
+    # Layer weights for each transformer block
+    for layer_idx in range(num_layers):
+        layer_prefix = f'layers.{layer_idx}'
+        
+        # Attention weights
+        state_dict[f'{layer_prefix}.attn.Wq.W'] = weights[f'{layer_prefix}.attn.q_proj.weight']
+        state_dict[f'{layer_prefix}.attn.Wk.W'] = weights[f'{layer_prefix}.attn.k_proj.weight']
+        state_dict[f'{layer_prefix}.attn.Wv.W'] = weights[f'{layer_prefix}.attn.v_proj.weight']
+        state_dict[f'{layer_prefix}.attn.Wo.W'] = weights[f'{layer_prefix}.attn.output_proj.weight']
+        
+        # Layer norm weights
+        state_dict[f'{layer_prefix}.ln1.g'] = weights[f'{layer_prefix}.ln1.weight']
+        state_dict[f'{layer_prefix}.ln2.g'] = weights[f'{layer_prefix}.ln2.weight']
+        
+        # FFN weights - transpose to match your Linear class format
+        state_dict[f'{layer_prefix}.ffn.W1.W'] = weights[f'{layer_prefix}.ffn.w1.weight']
+        state_dict[f'{layer_prefix}.ffn.W2.W'] = weights[f'{layer_prefix}.ffn.w2.weight']
+        state_dict[f'{layer_prefix}.ffn.W3.W'] = weights[f'{layer_prefix}.ffn.w3.weight']
+    
+    # Final layer norm
+    state_dict['ln_final.g'] = weights['ln_final.weight']
+    
+    # Language model head
+    state_dict['lm_head.W'] = weights['lm_head.weight']  # (vocab_size, d_model) -> (d_model, vocab_size)
+    
+    model.load_state_dict(state_dict)
+    return model(in_indices)
 
 
 
@@ -526,6 +562,8 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
+    from cs336_basics.training import cross_entropy_loss
+    return cross_entropy_loss(inputs, targets)
     raise NotImplementedError
 
 

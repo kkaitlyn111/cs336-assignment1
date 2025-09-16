@@ -1,5 +1,3 @@
-from ast import Mult
-from re import X
 import torch
 from einops import rearrange, einsum, reduce, repeat
 import torch.nn as nn
@@ -210,6 +208,33 @@ class TransformerBlock(nn.Module):
         x = x + self.attn(self.ln1(x))
         x = x + self.ffn(self.ln2(x))
         return x
+
+class TransformerLM(nn.Module):
+    def __init__(self, vocab_size: int, context_length: int, d_model: int, num_layers: int, num_heads: int, d_ff: int, theta: float | None = None, device: torch.device | None = None, dtype: torch.dtype | None = None):
+        super().__init__()
+        self.token_embeddings = Embedding(num_embeddings=vocab_size, embedding_dim=d_model, device =device, dtype= dtype)
+        self.layers = nn.ModuleList([TransformerBlock(d_model=d_model, num_heads=num_heads, d_ff=d_ff, max_seq_len=context_length, theta=theta, device=device, dtype=dtype) for _ in range(num_layers)])
+        self.ln_final = RMSNorm(d_model=d_model, device=device, dtype=dtype)
+        self.lm_head = Linear(in_features=d_model, out_features=vocab_size) # cos u want it to output a vector of probabilities? ..
+    
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # x is [batch ... seq len]
+        # output is [batch ... seq len vocab_size]
+        x = self.token_embeddings(x)
+        for layer in self.layers:
+            x = layer(x)
+        x = self.ln_final(x)
+        x = self.lm_head(x)
+        # x = softmax(self.lm_head(x), dim=-1)    # softmax over the last dimension, vocab size
+        return x
+
+
+        
+
+
+
+
+
 
 
 
