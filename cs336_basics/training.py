@@ -6,7 +6,8 @@ import math
 from cs336_basics.transformer import softmax
 import torch.optim as optim
 from collections.abc import Callable, Iterable
-from typing import Optional, Tuple
+from typing import Optional, Tuple, IO, BinaryIO
+import os
 
 
 # input preds [batch ... vocab], targets [batch ... vocab]
@@ -105,6 +106,33 @@ def gradient_clipping(params: Iterable[torch.nn.Parameter], M: torch.float, eps:
                 param.grad *= clip_coef
 
 
+# x is an integer array of token id's
+def data_loader(x: torch.LongTensor, batch_size: int, context_length: int, device_str: str):
 
+    device = torch.device(device_str)
+    inputs = []
+    targets = []
 
+    for _ in range(batch_size):
+        start = np.random.choice(len(x) - context_length)
+        inputs.append(x[start : start + context_length])
+        targets.append(x[start + 1 : start + context_length + 1])
+
+    inputs = np.array(inputs)
+    targets = np.array(targets)
+    
+    return (torch.LongTensor(inputs, device=device), torch.LongTensor(targets, device=device))
         
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int, out: str | os.PathLike | BinaryIO | IO[bytes]):
+    obj = {
+        'model': model.state_dict(),
+        'optimizer_state': optimizer.state_dict(),
+        'it': iteration
+    }
+    torch.save(obj, out)
+
+def load_checkpoint(src: str | os.PathLike | BinaryIO | IO[bytes], model: nn.Module, optimizer: optim.Optimizer):
+    obj = torch.load(src)
+    model.load_state_dict(obj['model'])
+    optimizer.load_state_dict(obj['optimizer_state'])
+    return obj['it']
