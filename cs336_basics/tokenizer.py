@@ -259,3 +259,6 @@ class Tokenizer:
         self.logger.info(f"load completed in {load_time:.2f} seconds")
         self.logger.info(f"loaded vocabulary size: {len(self.vocab)}")
         self.logger.info(f"loaded merges count: {len(self.merges)}")
+
+    def get_vocab_size(self):
+        return len(self.vocab)

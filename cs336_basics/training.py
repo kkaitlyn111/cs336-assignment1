@@ -6,7 +6,7 @@ import math
 from cs336_basics.transformer import softmax
 import torch.optim as optim
 from collections.abc import Callable, Iterable
-from typing import Optional, Tuple, IO, BinaryIO
+from typing import Optional, Tuple, IO, BinaryIO, Union
 import os
 
 
@@ -44,7 +44,7 @@ class SGD(optim.Optimizer):
         return loss
 
 class AdamW(optim.Optimizer):
-    def __init__(self, params, lr: torch.float, betas: Tuple[torch.float], eps: torch.float, weight_decay: torch.float):
+    def __init__(self, params, lr: torch.float, betas: Tuple[torch.float], weight_decay: torch.float, eps: Optional[torch.float] = 1e-6):
         defaults = {'lr': lr}
         super().__init__(params, defaults)
 
@@ -88,7 +88,7 @@ def cosine_lr_schedule(t: int, alpha_max: torch.float, alpha_min: torch.float, w
     return alpha_min + (1 + math.cos((t - warmup_steps)/(cosine_steps - warmup_steps) * math.pi))/2 * (alpha_max - alpha_min)
 
 
-def gradient_clipping(params: Iterable[torch.nn.Parameter], M: torch.float, eps: torch.float = 1e-6):
+def gradient_clipping(params: Iterable[torch.nn.Parameter], M: torch.float, eps: Optional[torch.float] = 1e-6):
     # compute global norm of all gradients
     total_norm = 0.0
     for param in params:
@@ -107,9 +107,9 @@ def gradient_clipping(params: Iterable[torch.nn.Parameter], M: torch.float, eps:
 
 
 # x is an integer array of token id's
-def data_loader(x: torch.LongTensor, batch_size: int, context_length: int, device_str: str):
+# x might be ndarray memmap
+def data_loader(x: torch.LongTensor | np.ndarray, batch_size: int, context_length: int, device: torch.device):
 
-    device = torch.device(device_str)
     inputs = []
     targets = []
 
@@ -121,9 +121,9 @@ def data_loader(x: torch.LongTensor, batch_size: int, context_length: int, devic
     inputs = np.array(inputs)
     targets = np.array(targets)
     
-    return (torch.LongTensor(inputs, device=device), torch.LongTensor(targets, device=device))
+    return (torch.tensor(inputs, dtype=torch.long, device=device), torch.tensor(targets, dtype=torch.long, device=device))
         
-def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int, out: str | os.PathLike | BinaryIO | IO[bytes]):
+def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int, out: Union[str, os.PathLike, BinaryIO, IO[bytes]]):
     obj = {
         'model': model.state_dict(),
         'optimizer_state': optimizer.state_dict(),
@@ -131,8 +131,9 @@ def save_checkpoint(model: nn.Module, optimizer: optim.Optimizer, iteration: int
     }
     torch.save(obj, out)
 
-def load_checkpoint(src: str | os.PathLike | BinaryIO | IO[bytes], model: nn.Module, optimizer: optim.Optimizer):
+def load_checkpoint(src: str | os.PathLike | BinaryIO | IO[bytes], model: nn.Module, optimizer: optim.Optimizer | None = None):
     obj = torch.load(src)
     model.load_state_dict(obj['model'])
-    optimizer.load_state_dict(obj['optimizer_state'])
-    return obj['it']
+    if optimizer:
+        optimizer.load_state_dict(obj['optimizer_state'])
+        return obj['it']
